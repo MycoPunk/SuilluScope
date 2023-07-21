@@ -192,7 +192,7 @@ ui <- fluidPage(
   .tabbable > .nav > li[class=active] > a {
     color: white;
     background-color: #666666;
-    width: 110px;
+    width: 130px;
     height: 35px;
     border-radius: 0px;
     font-family: Arial;
@@ -205,7 +205,7 @@ ui <- fluidPage(
   .tabbable > .nav > li > a {
     color: black;
     background-color: white;
-    width: 110px;
+    width: 130px;
     height: 35px;
     border-radius: 0px;
     font-family: Arial;
@@ -219,7 +219,7 @@ ui <- fluidPage(
   .tabbable > .nav > li > a:hover {
     color: black;
     background-color: #E6E6E6;
-    width: 110px;
+    width: 130px;
     height: 35px;
     border-radius: 0px;
     font-family: Arial;
@@ -305,7 +305,6 @@ tabPanel("HOME",
                       2, 
                       style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
                       br(), 
-                      #offset = 1,
                       selectizeInput(
                         inputId = "strain_image",
                         label = "SELECT STRAIN",
@@ -356,9 +355,9 @@ tabPanel("HOME",
                           )
                         )
                       ),
-                      #radioButtons(inputId = "switch_input", "Choose a dataset", choices = c("top of plate", "bottom of plate")),
-                      #style = "padding-right:40px"
-                    ),
+                      htmlOutput(outputId ="textbox_morpholgy", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
+                      
+),
                     column(
                       9, 
                       div(id = "plate_img"),
@@ -370,7 +369,7 @@ tabPanel("HOME",
                   htmlOutput(outputId = "morphology", width = "340px", style = "background-color:#E6E6E6; padding:18px")
                 ),
 
-                tabPanel("GROWTH RATE", fluidRow(
+                tabPanel("TEMPERATURE", fluidRow(
                   column(1, 
                          style = "height:700px; width:50px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
                   column(2, 
@@ -378,13 +377,18 @@ tabPanel("HOME",
                          br(),
                          selectInput(inputId = "datafiles",
                                      label = "SELECT TEMPERATURE (°C):",
-                                     choices = c("C10" = "10", "C20" = "20", "C24" = "24", "C27" = "27", "C30" = "30", "C34" = "34", "C37" = "37"))),
+                                     choices = c("C10" = "10", "C20" = "20", "C24" = "24", "C27" = "27", "C30" = "30", "C34" = "34", "C37" = "37")),
+                         htmlOutput(outputId ="textbox_temperature", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
+                  ),
                   column(8, 
-                         plotlyOutput("growth_plot", height = "600px", width = "700px"),
+                         plotlyOutput("temp_plot", height = "600px", width = "700px"),
                          htmlOutput(outputId = "growth", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px"),
                          offset = 1),  # Adjust the offset value as needed
                   
                   )), 
+                tabPanel("GROWTH RATES", fluidRow(
+                  column(12, style = "height:2px; background-color:#000000")), htmlOutput(outputId ="growth_plot", style = "background-color:transparent; padding:20px; margin-top:10px")),
+
                 tabPanel("METADATA", fluidRow(
                   column(12, style = "height:2px; background-color:#000000")), htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:10px")),
                 
@@ -446,6 +450,13 @@ server<- function(input, output){
   ))
   
   
+  output$textbox_morpholgy <- renderText(paste("This is a test"
+  ))
+  
+  output$textbox_temperature <- renderText(paste("This is a test"
+  ))
+  
+
   
 #define 'GROWTH' page displaying growth at different temperatures
 # use datafiles list of DFs to make the DF choice reactive (STATIC)
@@ -464,7 +475,7 @@ server<- function(input, output){
   
   
   # #plot growth data (STATIC)
-  # output$growth_plot<- renderPlotly({
+  # output$temp_plot<- renderPlotly({
   #   ggplot(datasetInput(), aes(x = n_days, y = area, group = Strain, color = Strain)) + 
   #     geom_point(aes(color = Strain), size = 2) +
   #     geom_line(aes(color = Strain), size = .8) +
@@ -518,7 +529,7 @@ server<- function(input, output){
     
     
 #plot that shit
-    output$growth_plot <- renderPlotly({
+    output$temp_plot <- renderPlotly({
       dataset <- get_filtered_data(input$datafiles)
       
       plot_ly(
@@ -541,8 +552,8 @@ server<- function(input, output){
     })
     
 #click the plot to update line visibility
-    observeEvent(event_data("plotly_click", source = "growth_plot"), {
-      selected_strain <- event_data("plotly_click", source = "growth_plot")$y
+    observeEvent(event_data("plotly_click", source = "temp_plot"), {
+      selected_strain <- event_data("plotly_click", source = "temp_plot")$y
       dataset <- get_filtered_data(input$datafiles)
       
 #change visibility for the selected strain
@@ -552,7 +563,7 @@ server<- function(input, output){
         visible <- ifelse(dataset$Strain %in% selected_strain, FALSE, TRUE)
       }
       
-      plotlyProxy("growth_plot") %>%
+      plotlyProxy("temp_plot") %>%
         plotlyProxyInvoke("restyle", list(visible = visible), list(2)) %>%
         plotlyProxyInvoke("restyle", list(visible = visible), list(3))
     })
