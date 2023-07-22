@@ -26,14 +26,16 @@ set.seed(666)
 #set wd
 setwd("~/Desktop/SuilluScope")
 
-#DB<-read.delim("<X>.txt", header = TRUE, sep = "\t", fill = TRUE, strip.white = TRUE, check.names = TRUE)
-
 #Metadata
 DB<-read.delim("Suillus_app_metadata.txt", header = TRUE, sep = "\t", fill = TRUE, strip.white = TRUE, check.names = TRUE)
 
 #growth data
 GD<-read.delim("MOCK_temperature_assay_2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
-#fix names 
+
+#fix names (from strain codes to the full species names + strain codes)
+lookup_table <- DB %>%
+  select(Culture.code, Full.Name)
+GD$Culture.code <- lookup_table$Full.Name[match(GD$Culture.code, lookup_table$Culture.code)]
 
 #remove "contam" rows and NA rows
 GD_clean <- GD %>%
@@ -55,10 +57,10 @@ prep_data_stats<- function(input) {
   #make long
   input_clean_long <- X %>%
     pivot_longer(
-      cols = -c("Temp", "Strain"),
+      cols = -c("Temp", "Culture.code"),
       names_to = "date",
       values_to = "area",
-      values_transform = list(area = as.numeric, Strain = as.character)
+      values_transform = list(area = as.numeric, Culture.code = as.character)
     )
   
   #change date format to read as a date in lubridate and xts
@@ -111,19 +113,19 @@ data_summary <- function(data, varname, groupnames){
 
 #run data_summary function
 C10 <- data_summary(C10, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 C20 <- data_summary(C20, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 C24 <- data_summary(C24, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 C27 <- data_summary(C27, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 C30 <- data_summary(C30, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 C34 <- data_summary(C34, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 C37 <- data_summary(C37, varname="area", 
-                    groupnames=c("Strain", "n_days"))
+                    groupnames=c("Culture.code", "n_days"))
 
 datafiles <- list(
   C10 = C10,
@@ -142,9 +144,9 @@ datafiles <- list(
 
 #Test graph before adding it
 
-#test_plot<- ggplot(C10, aes(x = n_days, y = area, group = Strain, color = Strain)) + 
-#  geom_point(aes(color = Strain), size = 2) +
-#  geom_line(aes(color = Strain), size = .8) +
+#test_plot<- ggplot(C10, aes(x = n_days, y = area, group = Culture.code, color = Culture.code)) + 
+#  geom_point(aes(color = Culture.code), size = 2) +
+#  geom_line(aes(color = Culture.code), size = .8) +
 #  scale_color_manual(values = c("#003f5c", 
 #                                "#668eaa",
 #                                "#c2e7ff",
@@ -306,7 +308,7 @@ tabPanel("HOME",
                       style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
                       br(), 
                       selectizeInput(
-                        inputId = "strain_image",
+                        inputId = "Culture.code_image",
                         label = "SELECT STRAIN",
                         multiple = FALSE,
                         choices = c("", DB$Full.Name),
@@ -369,15 +371,16 @@ tabPanel("HOME",
                   htmlOutput(outputId = "morphology", width = "340px", style = "background-color:#E6E6E6; padding:18px")
                 ),
 
-                tabPanel("TEMPERATURE", fluidRow(
+                tabPanel("TEMPERATURE", 
+                         fluidRow(
                   column(1, 
                          style = "height:700px; width:50px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
                   column(2, 
                          style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
                          br(),
                          selectInput(inputId = "datafiles",
-                                     label = "SELECT TEMPERATURE (°C):",
-                                     choices = c("C10" = "10", "C20" = "20", "C24" = "24", "C27" = "27", "C30" = "30", "C34" = "34", "C37" = "37")),
+                                     label = "SELECT TEMPERATURE:",
+                                     choices = c("10°C" = "10", "20°C" = "20", "24°C" = "24", "27°C" = "27", "30°C" = "30", "34°C" = "34", "37°C" = "37")),
                          htmlOutput(outputId ="textbox_temperature", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
                   ),
                   column(8, 
@@ -419,10 +422,10 @@ server<- function(input, output){
   
   output$home_right<- renderText(paste(tags$b("ISOLATE COLLECTION", style = "font-size: 24px; color: #D3AD0D"),
                                        tags$br(),
-                                       "All isolates used in the database are from the", tags$i("Suillus"), "genome strain collection, curated at Duke University.", 
+                                       "All isolates used in the database are from the", tags$i("Suillus"), "genome Culture.code collection, curated at Duke University.", 
                                        "For more information on the <i>Suillus</i> system, please visit",
                                        tags$a(href = "http://www2.hawaii.edu/~nn33/suillus/", "The International ", tags$i("Suillus"), " Consortium.", target = "_blank"),
-                                       "Genomic resources for these strains are available on the MycoCosm ",tags$i("Suillus"), 
+                                       "Genomic resources for these Culture.codes are available on the MycoCosm ",tags$i("Suillus"), 
                                        tags$a(href="https://mycocosm.jgi.doe.gov/Suillus/Suillus.info.html", "web portal", target="_blank"), 
                                        "opperated by DOE Joint Genome Institute.",
                                        "Isolates amenable to cryopreservation are publicly available as part of the", 
@@ -433,7 +436,7 @@ server<- function(input, output){
   output$home_bottom1  <- renderText(paste(tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"), tags$br(), 
                                            "If you find SuilluScope useful in your own research, please cite the assocaited publication: <>", 
                                            tags$br(), 
-                                           "If you use data on a specific genome strain in your own research, please cite SuilluScope as well as the paper that originally published that strain (listed in the Metadata tab)." 
+                                           "If you use data on a specific genome Culture.code in your own research, please cite SuilluScope as well as the paper that originally published that Culture.code (listed in the Metadata tab)." 
   )) 
   output$home_bottom2 <- renderText(paste("This is version v1.0 of the database, released on 25.July.2023",
                                          tags$br(),
@@ -463,22 +466,22 @@ server<- function(input, output){
   
 #  datasetInput <- reactive({
 #    switch(input$datafiles,
-#           "10" = C10,
-#           "20" = C20,
-#           "24" = C24, 
-#           "27" = C27,
-#           "30" = C30,
-#           "34" = C34, 
-#           "37" = C37)
+#           "10" = 10,
+#           "20" = 20,
+#           "24" = 24, 
+#           "27" = 27,
+#           "30" = 30,
+#           "34" = 34, 
+#           "37" = 37)
 #  })
   
   
   
   # #plot growth data (STATIC)
   # output$temp_plot<- renderPlotly({
-  #   ggplot(datasetInput(), aes(x = n_days, y = area, group = Strain, color = Strain)) + 
-  #     geom_point(aes(color = Strain), size = 2) +
-  #     geom_line(aes(color = Strain), size = .8) +
+  #   ggplot(datasetInput(), aes(x = n_days, y = area, group = Culture.code, color = Culture.code)) + 
+  #     geom_point(aes(color = Culture.code), size = 2) +
+  #     geom_line(aes(color = Culture.code), size = .8) +
   #     scale_color_manual(values = c("#003f5c", 
   #                                   "#668eaa",
   #                                   "#c2e7ff",
@@ -532,35 +535,50 @@ server<- function(input, output){
     output$temp_plot <- renderPlotly({
       dataset <- get_filtered_data(input$datafiles)
       
-      plot_ly(
-        data = dataset,
-        x = ~n_days,
-        y = ~area,
-        color = ~Strain,
-        colors = c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191", "#a794c7", "#ebdcff",
-                   "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6", "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5",
-                   "#ff7c43", "#ffac82", "#ffd9c6", "#ffa600", "#ffc171", "#fbddbe", "#962B09")) %>%
-        add_lines(size = 1, line = list(width = 2), hoverinfo = "text", text = ~Strain) %>%
+#Function to format the legend text with italics for genus / specific ep.
+      format_legend_text <- function(culture_code) {
+        words <- strsplit(culture_code, " ")[[1]]
+        if (length(words) >= 3) {
+          return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
+        } else if (length(words) == 2) {
+          return(paste0("<i>", words[1], " ", words[2], "</i>"))
+        } else {
+          return(culture_code)
+        }
+      }
+      
+#Create a new column in the with the formatted legend text
+      dataset$Formatted_Legend <- sapply(dataset$Culture.code, format_legend_text)
+      
+#Plot
+      plot_ly(data = dataset, x = ~n_days, y = ~area, line = list(width = 2),
+              legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
+              color = ~Formatted_Legend, colors = c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191", "#a794c7", "#ebdcff",
+                                                    "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6", "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5",
+                                                    "#ff7c43", "#ffac82", "#ffd9c6", "#ffa600", "#ffc171", "#fbddbe", "#962B09"),
+              hoverinfo = "text", text = ~Culture.code,
+              showlegend = TRUE) %>%
         layout(
           title = "",
           xaxis = list(title = "days post inoculation"),
           yaxis = list(title = HTML("colony area (mm<sup>2</sup>)")),
-          showlegend = TRUE,
-          legend = list(title = "Strain"),
+          legend = list(title = "Culture.code"),
           hovermode = "closest"
         )
     })
     
+    
+
 #click the plot to update line visibility
     observeEvent(event_data("plotly_click", source = "temp_plot"), {
-      selected_strain <- event_data("plotly_click", source = "temp_plot")$y
+      selected_Culture.code <- event_data("plotly_click", source = "temp_plot")$y
       dataset <- get_filtered_data(input$datafiles)
       
-#change visibility for the selected strain
-      if (is.null(selected_strain)) {
+#change visibility for the selected Culture.code
+      if (is.null(selected_Culture.code)) {
         visible <- TRUE
       } else {
-        visible <- ifelse(dataset$Strain %in% selected_strain, FALSE, TRUE)
+        visible <- ifelse(dataset$Culture.code %in% selected_Culture.code, FALSE, TRUE)
       }
       
       plotlyProxy("temp_plot") %>%
