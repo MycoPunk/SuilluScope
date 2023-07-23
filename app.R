@@ -1,12 +1,9 @@
-#this script generates a shiny app for the Suillus genome set to visualize / download
-#cultures morphologies under different conditions 
-#ITS sequences
-#growth rates at diferent temperatures
+#this script generates a shiny app for the Suillus genome set to visualize 
+#cultures morphology under different conditions 
 
 
 #load libraries
 library(shiny)
-#library(data.table)
 library(tidyverse)
 library(shinyBS)
 library(ggtree)
@@ -30,7 +27,8 @@ setwd("~/Desktop/SuilluScope")
 DB<-read.delim("Suillus_app_metadata.txt", header = TRUE, sep = "\t", fill = TRUE, strip.white = TRUE, check.names = TRUE)
 
 #growth data
-GD<-read.delim("MOCK_temperature_assay_2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
+#GD<-read.delim("MOCK_temperature_assay_2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
+GD<-read.delim("temperature_assay_2023_20s.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
 
 #fix names (from strain codes to the full species names + strain codes)
 lookup_table <- DB %>%
@@ -41,10 +39,14 @@ GD$Culture.code <- lookup_table$Full.Name[match(GD$Culture.code, lookup_table$Cu
 GD_clean <- GD %>%
   filter(!if_any(everything(), ~str_detect(., "contam")))
 
-#remove "replicate" col
+#make a copy for the growth rate data
+GD_clean_with_rep<- GD_clean
+
+#remove "replicate" col for parser
 GD_clean$replicate <- NULL
 
 input<- GD_clean
+
 #prep data by reformatting to long form. NOTE unhash if you want to average over the mean)
 prep_data_stats<- function(input) {
   #convert to numeric
@@ -54,6 +56,7 @@ prep_data_stats<- function(input) {
   X <- as.data.table(input)
   #input_clean<- X[,lapply(.SD,mean),keys] #YOU ARE HERE CALCULATE SE. 
   
+
   #make long
   input_clean_long <- X %>%
     pivot_longer(
@@ -62,6 +65,8 @@ prep_data_stats<- function(input) {
       values_to = "area",
       values_transform = list(area = as.numeric, Culture.code = as.character)
     )
+  
+  
   
   #change date format to read as a date in lubridate and xts
   input_clean_long$date2<- lubridate::parse_date_time(input_clean_long$date, "dmy")
@@ -78,8 +83,10 @@ prep_data_stats<- function(input) {
   return(input_clean_long)
 }
 
+
 #run function to make input data
 prep_stats_test<-prep_data_stats(GD_clean)
+
 
 #Separate by Temperature treatment
 C10<- prep_stats_test[prep_stats_test$Temp == 10,]
@@ -89,6 +96,7 @@ C27<- prep_stats_test[prep_stats_test$Temp == 27,]
 C30<- prep_stats_test[prep_stats_test$Temp == 30,]
 C34<- prep_stats_test[prep_stats_test$Temp == 34,]
 C37<- prep_stats_test[prep_stats_test$Temp == 37,]
+
 
 
 #calculate mean and se for each temp
@@ -136,6 +144,58 @@ datafiles <- list(
   C34 = C34,
   C37 = C37
 )
+
+
+###prep growth rate data for 20 degree control
+#get only 20 degree
+C20_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 20,]
+
+#make longer (keep rep codes)
+#make long
+input_clean_long_reps <- C20_all_data %>%
+  pivot_longer(
+    cols = -c("Temp", "Culture.code", "replicate"),
+    names_to = "date",
+    values_to = "area",
+    values_transform = list(area = as.numeric, Culture.code = as.character)
+  )
+
+#make data.table
+input_clean_long_reps<- as.data.table(input_clean_long_reps)
+
+#change date format to read as a date in lubridate and xts
+input_clean_long_reps$date2<- lubridate::parse_date_time(input_clean_long_reps$date, "dmy")
+
+#change to number of days 
+days <- yday(input_clean_long_reps$date2) - 165 #first day was Jun 14 = day 0 (the day we inoculated, wich is 165 days into the year)
+input_clean_long_reps$n_days<- days
+
+#clean up unnecessary cols
+input_clean_long_reps$date <- NULL
+input_clean_long_reps$date2 <- NULL
+input_clean_long_reps$Temp <- NULL
+
+
+#calculate growth rate, group by each unique combination of Sp and replicate, sort by date for each group, and use lag to calculate the difference in area between that date and the one before it.
+growth_rates <- input_clean_long_reps %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+
+#Remove the grouping
+growth_rates <- ungroup(growth_rates)
+
+#get the average increase_in_area and se for each Sp and n_days combination
+df_average <- growth_rates %>%
+  group_by(Culture.code, n_days) %>%
+  do(data.frame(avg_increase = mean(.$increase_in_area),
+                std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+  ungroup()
+
+
+
+
+
+
 
 #run stats
 #test %>% rstatix::shapiro_test(area)
@@ -386,20 +446,26 @@ tabPanel("HOME",
                   column(8, 
                          plotlyOutput("temp_plot", height = "600px", width = "700px"),
                          htmlOutput(outputId = "growth", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px"),
-                         offset = 1),  # Adjust the offset value as needed
+                         offset = 1),
                   
-                  )), 
-                tabPanel("GROWTH RATES", fluidRow(
-                  column(12, style = "height:2px; background-color:#000000")), htmlOutput(outputId ="growth_plot", style = "background-color:transparent; padding:20px; margin-top:10px")),
+                  )),
 
-                tabPanel("METADATA", fluidRow(
-                  column(12, style = "height:2px; background-color:#000000")), htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:10px")),
-                
-                
-                )
+tabPanel("GROWTH RATES", 
+         fluidRow(
+           column(12, 
+                  plotlyOutput("growth_rate_plot", height = "600px", width = "700px"),
+                  htmlOutput(outputId = "growth_rate", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px"),
+                  offset = 1),
+         )),
+                 
+                 
+tabPanel("METADATA", fluidRow(
+  column(12, style = "height:2px; background-color:#000000")), htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:10px")),
+
+
     )
   )
-
+)
 
 
 ##-----------create server object-----------
@@ -517,7 +583,7 @@ server<- function(input, output){
 
 
   
-
+#TEMPERATURE FIGURE
 #use datafiles list of DFs to make the DF choice reactive and filter the data by temperature
     get_filtered_data <- function(temp) {
       switch(temp,
@@ -549,13 +615,18 @@ server<- function(input, output){
       
 #Create a new column in the with the formatted legend text
       dataset$Formatted_Legend <- sapply(dataset$Culture.code, format_legend_text)
+   
+#Define the color palette
+species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191",
+                          "#a794c7", "#ebdcff", "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6",
+                          "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5", "#ff7c43", "#ffac82", "#ffd9c6",
+                          "#ffa600", "#ffc171", "#fbddbe", "#962B09")
       
+         
 #Plot
       plot_ly(data = dataset, x = ~n_days, y = ~area, line = list(width = 2),
               legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
-              color = ~Formatted_Legend, colors = c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191", "#a794c7", "#ebdcff",
-                                                    "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6", "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5",
-                                                    "#ff7c43", "#ffac82", "#ffd9c6", "#ffa600", "#ffc171", "#fbddbe", "#962B09"),
+              color = ~Formatted_Legend, colors = species_colors,
               hoverinfo = "text", text = ~Culture.code,
               showlegend = TRUE) %>%
         layout(
@@ -587,10 +658,100 @@ server<- function(input, output){
     })
   
 
+
+
+#output$growth_rate_plot <- renderPlot({
+#  ggplot(df_average, aes(x = as.factor(n_days), y = avg_increase, color = Culture.code)) +
+#    geom_point(position = position_jitter(width = 0.2), size = 3) +
+#    geom_errorbar(aes(ymin = avg_increase - std_error, ymax = avg_increase + std_error),
+#                  width = 0.2, position = position_dodge(width = 0.2)) +
+#    geom_smooth(method = "loess", se = FALSE, size = 1, aes(group = Culture.code, color = Culture.code)) +
+#    labs(x = "n_days", y = "Average Increase in Area", title = "Average Increase in Area by n_days and Sp") +
+#    theme_minimal() +
+#    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Rotate x-axis labels for better readability
+#    scale_color_manual(values = species_colors)
+#})
+
+# WORKS BUT IS UGLY
+#output$growth_rate_plot <- renderPlotly({
+#  # Assuming df_average is the data frame containing your data
+#  plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, color = ~Culture.code) %>%
+#    add_markers(position = "jitter", size = 3, error_y = list(type = "data", array = ~std_error, visible = TRUE), width = 0.2) %>%
+#    add_lines(type = "loess", hoverinfo = "none", line = list(shape = "linear", width = 1)) %>%
+#    layout(title = "Average Increase in Area by n_days and Sp",
+#           xaxis = list(title = "n_days"),
+#           yaxis = list(title = "Average Increase in Area"),
+#           hovermode = "closest",
+#           showlegend = FALSE)
+#})
+
+    
+output$growth_rate_plot <- renderPlotly({
+ 
+#Function to format the legend text with italics for genus / specific ep.(again)
+format_legend_text <- function(culture_code) {
+    words <- strsplit(culture_code, " ")[[1]]
+    if (length(words) >= 3) {
+      return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
+    } else if (length(words) == 2) {
+      return(paste0("<i>", words[1], " ", words[2], "</i>"))
+    } else {
+      return(culture_code)
+    }
+  } 
+  
+#fun function for format legend
+df_average$Formatted_Legend <- sapply(df_average$Culture.code, format_legend_text)
+
+# WORKS WITH ERROR RIBBON BUT LEGEND
+#plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, 
+#        legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
+#        color = ~Formatted_Legend, colors = species_colors,
+#        hoverinfo = "text", text = ~Culture.code,
+#        showlegend = FALSE) %>%
+#  add_trace(type = "scatter", mode = "markers", 
+#            marker = list(size = 4),  # Adjust the dot size here
+#            legendonly = TRUE) %>%
+#  add_ribbons(ymin = ~(avg_increase - std_error), ymax = ~(avg_increase + std_error),
+#              fill = "rgba(0,100,80,0.2)", line = list(color = 'transparent'),
+#              showlegend = FALSE) %>%
+#  add_lines(showlegend = TRUE) %>%
+#  layout(title = "",
+#         xaxis = list(title = "days post-inoculation"),
+#         yaxis = list(title = "average growth rate"),
+#         legend = list(title = "Culture.code"),
+#         hovermode = "closest")
+
+# Create the main plot with markers (dots) only
+plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, 
+        legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
+        color = ~Formatted_Legend, colors = species_colors,
+        hoverinfo = "text", text = ~Culture.code,
+        showlegend = FALSE) %>%
+  add_trace(type = "scatter", mode = "markers", 
+            marker = list(size = 4)) %>%
+  add_ribbons(ymin = ~(avg_increase - std_error), ymax = ~(avg_increase + std_error),
+              fill = "rgba(0,100,80,0.2)", line = list(color = 'transparent'),
+              showlegend = FALSE) %>%
+  add_lines(showlegend = TRUE) %>%
+  layout(title = "",
+         xaxis = list(title = "days post-inoculation"),
+         yaxis = list(title = "average growth rate"),
+         legend = list(title = "Culture.code"),
+         hovermode = "closest")
+
+
+
+
+
+
+
+
+})
+
+
+
 }
-
-
-
 
 ###run as app
 shinyApp(ui = ui, server = server)
