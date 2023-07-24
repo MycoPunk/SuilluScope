@@ -1,6 +1,7 @@
-#this script generates a shiny app for the Suillus genome set to visualize 
-#cultures morphology under different conditions 
-
+####
+#This script holds all of the code necessary to run the R shiny app, SuilluScope. 
+# this is version 1.0, released in August of 2023. 
+####
 
 #load libraries
 library(shiny)
@@ -16,6 +17,7 @@ library(mailtoR)
 library(lubridate) #to work with dates
 library(xts) #to work with dates
 library(data.table)
+library(DT) #for working with interactive datatables
 
 ##set seed for reproducibility
 set.seed(666)
@@ -25,6 +27,20 @@ setwd("~/Desktop/SuilluScope")
 
 #Metadata
 DB<-read.delim("Suillus_app_metadata.txt", header = TRUE, sep = "\t", fill = TRUE, strip.white = TRUE, check.names = TRUE)
+
+#metadata for the app
+DB_slim<- DB
+DB_slim$Assembly.Length<- NULL
+DB_slim$n.Genes<- NULL
+DB_slim$Sequencing.depth<- NULL 
+DB_slim$n.Gaps<- NULL
+DB_slim$Scaffold.N50<- NULL
+DB_slim$Scaffold.L50.Mbp<- NULL
+DB_slim$n.contigs<- NULL
+DB_slim$n.scaffolds<- NULL
+DB_slim$seq.platform<- NULL
+DB_slim$Host.speices.for.assays<- NULL
+DB_slim$Range_and_region<- NULL
 
 #growth data
 #GD<-read.delim("MOCK_temperature_assay_2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
@@ -452,15 +468,36 @@ tabPanel("HOME",
 
 tabPanel("GROWTH RATES", 
          fluidRow(
-           column(12, 
+           column(11, 
                   plotlyOutput("growth_rate_plot", height = "600px", width = "700px"),
                   htmlOutput(outputId = "growth_rate", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px"),
                   offset = 1),
          )),
                  
                  
-tabPanel("METADATA", fluidRow(
-  column(12, style = "height:2px; background-color:#000000")), htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:10px")),
+tabPanel(
+  "METADATA",
+  fluidRow(
+    column(12, style = "height:2px; background-color:#000000")
+  ),
+  htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:10px"),
+  titlePanel("Interactive Spreadsheet"),
+  sidebarLayout(
+    sidebarPanel(
+      # Checkbox group for column selection
+      checkboxGroupInput(
+        "columns",
+        "Select Columns:",
+        choices = colnames(DB_slim),
+        selected = colnames(DB_slim)  # By default, all columns are selected
+      )
+    ),
+    mainPanel(
+      # Data table output
+      DTOutput("data_table")  # Add this line to display the data table
+    )
+  )
+),
 
 
     )
@@ -526,64 +563,13 @@ server<- function(input, output){
   ))
   
 
-  
-#define 'GROWTH' page displaying growth at different temperatures
-# use datafiles list of DFs to make the DF choice reactive (STATIC)
-  
-#  datasetInput <- reactive({
-#    switch(input$datafiles,
-#           "10" = 10,
-#           "20" = 20,
-#           "24" = 24, 
-#           "27" = 27,
-#           "30" = 30,
-#           "34" = 34, 
-#           "37" = 37)
-#  })
-  
-  
-  
-  # #plot growth data (STATIC)
-  # output$temp_plot<- renderPlotly({
-  #   ggplot(datasetInput(), aes(x = n_days, y = area, group = Culture.code, color = Culture.code)) + 
-  #     geom_point(aes(color = Culture.code), size = 2) +
-  #     geom_line(aes(color = Culture.code), size = .8) +
-  #     scale_color_manual(values = c("#003f5c", 
-  #                                   "#668eaa",
-  #                                   "#c2e7ff",
-  #                                   "#2f4b7c",
-  #                                   "#8293bc",
-  #                                   "#d6e2ff",
-  #                                   "#665191", 
-  #                                   "#a794c7",
-  #                                   "#ebdcff",
-  #                                   "#a05195",
-  #                                   "#ce94c4",
-  #                                   "#fcd8f5",
-  #                                   "#d45087",
-  #                                   "#ec95b6",
-  #                                   "#ffd5e5",
-  #                                   "#f95d6a",
-  #                                   "#ff9d9e",
-  #                                   "#ffd6d5",
-  #                                   "#ff7c43",
-  #                                   "#ffac82",
-  #                                   "#ffd9c6",
-  #                                   "#ffa600",
-  #                                   "#ffc171",
-  #                                   "#fbddbe",
-  #                                   "#962B09")) +
-  #     theme_minimal()+
-  #     xlab("dpi")+ ylab("colony area (mm^2)")+
-  #     ylab(bquote("Colony area "~(mm^2)))+
-  #     #ggtitle("S. <> <>")+
-  #     geom_errorbar(aes(ymin=area-se, ymax=area+se, alpha=0.6), width=2, show.legend = FALSE,
-  #                   position=position_dodge(1)
-  #     )})}
-
 
   
-#TEMPERATURE FIGURE
+
+### 
+#TEMPERATURE PLOT
+###
+  
 #use datafiles list of DFs to make the DF choice reactive and filter the data by temperature
     get_filtered_data <- function(temp) {
       switch(temp,
@@ -659,7 +645,7 @@ species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e
   
 
 
-
+#
 #output$growth_rate_plot <- renderPlot({
 #  ggplot(df_average, aes(x = as.factor(n_days), y = avg_increase, color = Culture.code)) +
 #    geom_point(position = position_jitter(width = 0.2), size = 3) +
@@ -672,81 +658,72 @@ species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e
 #    scale_color_manual(values = species_colors)
 #})
 
-# WORKS BUT IS UGLY
-#output$growth_rate_plot <- renderPlotly({
-#  # Assuming df_average is the data frame containing your data
-#  plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, color = ~Culture.code) %>%
-#    add_markers(position = "jitter", size = 3, error_y = list(type = "data", array = ~std_error, visible = TRUE), width = 0.2) %>%
-#    add_lines(type = "loess", hoverinfo = "none", line = list(shape = "linear", width = 1)) %>%
-#    layout(title = "Average Increase in Area by n_days and Sp",
-#           xaxis = list(title = "n_days"),
-#           yaxis = list(title = "Average Increase in Area"),
-#           hovermode = "closest",
-#           showlegend = FALSE)
-#})
 
+###
+#GROWTH RATE PLOT
+###
     
-output$growth_rate_plot <- renderPlotly({
- 
-#Function to format the legend text with italics for genus / specific ep.(again)
-format_legend_text <- function(culture_code) {
-    words <- strsplit(culture_code, " ")[[1]]
-    if (length(words) >= 3) {
-      return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
-    } else if (length(words) == 2) {
-      return(paste0("<i>", words[1], " ", words[2], "</i>"))
-    } else {
-      return(culture_code)
-    }
-  } 
-  
-#fun function for format legend
-df_average$Formatted_Legend <- sapply(df_average$Culture.code, format_legend_text)
-
-# WORKS WITH ERROR RIBBON BUT LEGEND
-#plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, 
-#        legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
-#        color = ~Formatted_Legend, colors = species_colors,
-#        hoverinfo = "text", text = ~Culture.code,
-#        showlegend = FALSE) %>%
-#  add_trace(type = "scatter", mode = "markers", 
-#            marker = list(size = 4),  # Adjust the dot size here
-#            legendonly = TRUE) %>%
-#  add_ribbons(ymin = ~(avg_increase - std_error), ymax = ~(avg_increase + std_error),
-#              fill = "rgba(0,100,80,0.2)", line = list(color = 'transparent'),
-#              showlegend = FALSE) %>%
-#  add_lines(showlegend = TRUE) %>%
-#  layout(title = "",
-#         xaxis = list(title = "days post-inoculation"),
-#         yaxis = list(title = "average growth rate"),
-#         legend = list(title = "Culture.code"),
-#         hovermode = "closest")
-
-# Create the main plot with markers (dots) only
-plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, 
-        legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
-        color = ~Formatted_Legend, colors = species_colors,
-        hoverinfo = "text", text = ~Culture.code,
-        showlegend = FALSE) %>%
-  add_trace(type = "scatter", mode = "markers", 
-            marker = list(size = 4)) %>%
-  add_ribbons(ymin = ~(avg_increase - std_error), ymax = ~(avg_increase + std_error),
-              fill = "rgba(0,100,80,0.2)", line = list(color = 'transparent'),
+    output$growth_rate_plot <- renderPlotly({
+      species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191",
+                          "#a794c7", "#ebdcff", "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6",
+                          "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5", "#ff7c43", "#ffac82", "#ffd9c6",
+                          "#ffa600", "#ffc171", "#fbddbe", "#962B09")
+      
+      #Function to format the legend text with italics for genus / specific ep.(again)
+      format_legend_text <- function(culture_code) {
+        words <- strsplit(culture_code, " ")[[1]]
+        if (length(words) >= 3) {
+          return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
+        } else if (length(words) == 2) {
+          return(paste0("<i>", words[1], " ", words[2], "</i>"))
+        } else {
+          return(culture_code)
+        }
+      } 
+      
+      #fun function for format legend
+      df_average$Formatted_Legend <- sapply(df_average$Culture.code, format_legend_text)
+      
+      
+      # Create the main plot with markers (dots) only
+      plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, 
+              legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
+              color = ~Formatted_Legend, colors = species_colors,
+              hoverinfo = "text", text = ~Culture.code,
               showlegend = FALSE) %>%
-  add_lines(showlegend = TRUE) %>%
-  layout(title = "",
-         xaxis = list(title = "days post-inoculation"),
-         yaxis = list(title = "average growth rate"),
-         legend = list(title = "Culture.code"),
-         hovermode = "closest")
+        add_trace(type = "scatter", mode = "markers", 
+                  marker = list(size = 4)) %>%
+        add_ribbons(ymin = ~(avg_increase - std_error), ymax = ~(avg_increase + std_error),
+                    fill = "rgba(0,100,80,0.2)", line = list(color = 'transparent'),
+                    showlegend = FALSE) %>%
+        add_lines(showlegend = TRUE) %>%
+        layout(title = "",
+               xaxis = list(title = "days post-inoculation"),
+               yaxis = list(title = "average growth rate"),
+               legend = list(title = "Culture.code"),
+               hovermode = "closest")
+      
+    })
 
 
+###METADATA TAB
+# Reactive function to filter selected columns from the DB_slim dataframe
+selected_columns <- reactive({
+  if (length(input$columns) > 0) {
+    # Filter the selected columns
+    DB_slim %>%
+      select(all_of(input$columns))
+  } else {
+    # If no columns selected, return an empty dataframe
+    data.frame()
+  }
+})
 
-
-
-
-
-
+# Render the datatable based on the selected columns
+output$data_table <- renderDT({
+  req(input$columns) # Ensure that a column is selected
+  selected_columns <- c("Culture.code", input$columns)
+  datatable(DB_slim[, selected_columns, drop = FALSE], options = list(pageLength = 10))
 })
 
 
