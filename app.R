@@ -455,7 +455,7 @@ tabPanel("HOME",
                          style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
                          br(),
                          selectInput(inputId = "datafiles",
-                                     label = "SELECT TEMPERATURE:",
+                                     label = "SELECT TEMPERATURE",
                                      choices = c("10°C" = "10", "20°C" = "20", "24°C" = "24", "27°C" = "27", "30°C" = "30", "34°C" = "34", "37°C" = "37")),
                          htmlOutput(outputId ="textbox_temperature", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
                   ),
@@ -477,28 +477,66 @@ tabPanel("GROWTH RATES",
                  
 tabPanel(
   "METADATA",
-  fluidRow(
-    column(12, style = "height:2px; background-color:#000000")
-  ),
-  htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:10px"),
-  titlePanel("Interactive Spreadsheet"),
+  htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:-40px"),
+  #titlePanel("Interactive Spreadsheet"),
   sidebarLayout(
     sidebarPanel(
       # Checkbox group for column selection
+      style = "width: 300px;", # Adjust the width here (e.g., width: 150px;)
       checkboxGroupInput(
         "columns",
-        "Select Columns:",
+        "SELECT COLUMNS TO DISPLAY",
         choices = colnames(DB_slim),
-        selected = colnames(DB_slim)  # By default, all columns are selected
+        selected = colnames(DB_slim)
       )
     ),
     mainPanel(
+      style = "margin-left:-150px",
       # Data table output
-      DTOutput("data_table")  # Add this line to display the data table
+      DTOutput("data_table")
     )
   )
 ),
 
+# tabPanel(
+#   "METADATA",
+#   tags$style(
+#     HTML(".selectize-input { background-color: transparent important; }")
+#   ),
+#   htmlOutput(outputId = "metadata", style = "padding: 20px; margin-top: -40px;"),
+#   fluidRow(
+#     column(
+#       2,
+#       style = "height:700px; padding-left: 0px; padding-right: 0px; background-color: rgba(119, 120, 55, 0);",
+#       # Selection panel
+#       sidebarLayout(
+#         sidebarPanel(
+#           checkboxGroupInput(
+#             "columns",
+#             "Select Columns:",
+#             choices = colnames(DB_slim),
+#             selected = colnames(DB_slim),
+#             inline = FALSE # Set inline to FALSE for better spacing
+#           )
+#         ),
+#         mainPanel(NULL)
+#       )
+#     ),
+#     column(
+#       8,
+#       style = "padding-left: 0px; padding-right: 0px; background-color: rgba(119, 120, 55, 0.0);",
+#       # Data table output
+#       DTOutput("data_table")
+#     )
+#   )
+# )
+
+
+
+
+
+     
+         
 
     )
   )
