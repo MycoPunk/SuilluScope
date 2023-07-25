@@ -378,7 +378,7 @@ tabPanel("HOME",
                   fluidRow(
                     column( 
                       1, 
-                      style = "height:700px; width:50px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), #little buffer col.
+                      style = "height:700px; width:33px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), #little buffer col.
                     column( 
                       2, 
                       style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
@@ -450,7 +450,7 @@ tabPanel("HOME",
                 tabPanel("TEMPERATURE", 
                          fluidRow(
                   column(1, 
-                         style = "height:700px; width:50px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
+                         style = "height:700px; width:33px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
                   column(2, 
                          style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
                          br(),
@@ -594,10 +594,23 @@ server<- function(input, output){
   ))
   
   
-  output$textbox_morpholgy <- renderText(paste("This is a test"
+  output$textbox_morpholgy <- renderText(paste(tags$b("METHODS:"), 
+                                               tags$br(), 
+                                               "Cultures were grown on four media types including Modified Melin-Norkrans (MMN), 
+                                               Modified Fries Media (Fries), Modified Hagem’s Agar (Hagem’s), and Pachlewski’s Media (Pachlewski’s, or Px). 
+                                               All media types were prepared at their full respective carbon concentrations and adjusted to pH 6 prior to autoclaving. 
+                                               Cultures were grown for 28 days, at room temperature, in the dark, prior to being photographed."
   ))
   
-  output$textbox_temperature <- renderText(paste("This is a test"
+  output$textbox_temperature <- renderText(paste(tags$b("METHODS:"), 
+                                                 tags$br(), 
+                                                 "Cultures were started by placing 3mm agar plugs on Modified Melin-Norkrans (MMN) media, 
+                                                 adjusted to pH 6 prior to autoclaving, and grown in temperature adjustable incubators, 
+                                                 in the dark, for a total of 33 days (at n=4 replicates per species per temperature treatment). 
+                                                 Starting on day 8, colony area was recorded twice per week over the course of the assay by 
+                                                 marking the colony margin on the back of each petri dish with a fine-tip sharpie. 
+                                                 After 33 days of growth, the back of the petri dishes were imaged using a flatbed scanner, 
+                                                 and colony area was calculated for each time point using the program imageJ. "
   ))
   
 
