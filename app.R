@@ -9,24 +9,25 @@
 library(shiny)
 library(tidyverse)
 library(shinyBS)
-library(ggtree)
-library(ape)
 library(plotly)
 library(ggplot2)
 library(ggpubr)
-library(dplyr)
 library(mailtoR)
 library(lubridate) #to work with dates
 library(xts) #to work with dates
 library(data.table)
 library(DT) #for working with interactive datatables
 library(shinyjs)
+library(plotrix)
+library(plyr)
+library(dplyr)
+
 
 ##set seed for reproducibility
 set.seed(666)
 
 #set wd
-setwd("~/Desktop/SuilluScope")
+#setwd("~/Desktop/SuilluScope")
 
 #Metadata
 DB<-read.delim("Suillus_app_metadata.txt", header = TRUE, sep = "\t", fill = TRUE, strip.white = TRUE, check.names = TRUE)
@@ -57,7 +58,7 @@ GD$Culture.code <- lookup_table$Full.Name[match(GD$Culture.code, lookup_table$Cu
 
 #remove "contam" rows and NA rows
 GD_clean <- GD %>%
-  filter(!if_any(everything(), ~str_detect(., "contam")))
+  dplyr::filter(!if_any(everything(), ~str_detect(., "contam")))
 
 #make a copy for the growth rate data
 GD_clean_with_rep<- GD_clean
@@ -120,8 +121,8 @@ C37<- prep_stats_test[prep_stats_test$Temp == 37,]
 
 #function to calculate mean and se for each temp
 data_summary <- function(data, varname, groupnames){
-  require(plyr)
-  library(plotrix)
+  #require(plyr)
+  #library(plotrix)
   summary_func <- function(x, col){
     c(mean = mean(x[[col]], na.rm=TRUE),
       se = std.error(x[[col]], na.rm=TRUE))
@@ -229,25 +230,25 @@ C37_all_data_long <- C37_all_data_long %>% select(-date, -date2, -Temp)
 #calculate growth rate, group by each unique combination of Sp and replicate, sort by date for each group, and use lag to calculate the difference in area between that date and the one before it.
 growth_rates10 <- C10_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 growth_rates20 <- C20_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 growth_rates24 <- C24_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 growth_rates27 <- C27_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 growth_rates30 <- C30_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 growth_rates34 <- C34_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 growth_rates37 <- C37_all_data_long %>%
   group_by(Culture.code, replicate) %>%
-  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+  group_modify(~mutate(., increase_in_area = area - dplyr::lag(area, default = first(area))))
 
 
 #Remove the grouping
