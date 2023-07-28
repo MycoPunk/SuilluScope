@@ -1,9 +1,9 @@
-####
+##########################################
 #This script contains all of the code necessary to run the R shiny app, SuilluScope. 
 #This is version 1.0, released in August of 2023. 
 #Version 1.0 highlights 25 strains of Suillus, using two different assays: culture phenotype on four different media types
 #and a replicated (n=4) growth rate assay conducted across 7 temperatures.
-####
+##########################################
 
 #load libraries
 library(shiny)
@@ -43,7 +43,8 @@ DB_slim$n.contigs<- NULL
 DB_slim$n.scaffolds<- NULL
 DB_slim$seq.platform<- NULL
 DB_slim$Host.speices.for.assays<- NULL
-DB_slim$Range_and_region<- NULL
+DB_slim$Range.and.region<- NULL
+
 
 
 #growth data
@@ -447,38 +448,38 @@ ui <- fluidPage(
                            fluidRow(
                              column(
                                width = 6, 
-                               htmlOutput(outputId ="home_left", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-right:355px; margin-left:-282px;")
+                               htmlOutput(outputId ="home_left", style = "background-color: rgba(0, 0, 0, 0.6); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-right:355px; margin-left:-282px;")
                              ),
                              column(
                                width = 3, 
-                               htmlOutput(outputId ="home_right", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-left:-270px; margin-right:-36px;")
+                               htmlOutput(outputId ="home_right", style = "background-color: rgba(0, 0, 0, 0.6); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-left:-270px; margin-right:-36px;")
                              )
                            ),
-
-
-useShinyjs(),
-
-fluidRow(
-  column(
-    width = 12,
-    div(
-      style = "position: relative;", 
-      img(src='lower_background.png', align = "center", height="60%", width="101%", res = 128),
-      div(
-        id = "citation_info",
-        class = "well well-lg",
-        style = "position: absolute; top: 10px; left: 10px; color: #4D4D4D; margin: 0; margin-top:5px; margin-left:450px; margin-right:450px; padding: 15px; background-color: rgba(0, 0, 0, .5); background-color: rgba(0, 0, 0, 0); border: 5px solid gray; border-radius: 20px",
-        tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"),
-        tags$br(),
-        "If you find SuilluScope useful in your own research, please cite the associated publication",
-        tags$a("HERE", href = "#", 
-               id = "tooltip_link",
-               style = "color: black; text-decoration: underline;"
-        ),"as well as the paper(s) that originally published the strains you used in your work (listed in the Metadata tab)."
-      )
-    )
-  )
-),
+                           
+                           
+                           useShinyjs(),
+                           
+                           fluidRow(
+                             column(
+                               width = 12,
+                               div(
+                                 style = "position: relative;", 
+                                 img(src='lower_background.png', align = "center", height="60%", width="101%", res = 128),
+                                 div(
+                                   id = "citation_info",
+                                   class = "well well-lg",
+                                   style = "position: absolute; top: 10px; left: 10px; color: #4D4D4D; margin: 0; margin-top:5px; margin-left:450px; margin-right:450px; padding: 15px; background-color: rgba(0, 0, 0, .5); background-color: rgba(0, 0, 0, 0); border: 5px solid gray; border-radius: 20px",
+                                   tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"),
+                                   tags$br(),
+                                   "If you find SuilluScope useful in your own research, please cite the associated publication",
+                                   tags$a("HERE", href = "#", 
+                                          id = "tooltip_link",
+                                          style = "color: black; text-decoration: underline;"
+                                   ),"as well as the paper(s) that originally published the strains you used in your work (listed in the Metadata tab)."
+                                 )
+                               )
+                             )
+                           ),
                            fluidRow(
                              column(
                                width = 12,
@@ -611,7 +612,7 @@ fluidRow(
                     )
                   )
                 ),
-         
+                
     )
   )
 )
@@ -622,7 +623,7 @@ fluidRow(
 ##########################################
 ##---------create server object---------##
 ##########################################
-server<- function(input, output){ 
+server<- function(input, output, session){ 
   #define 'HOME' page
   output$home_left <- renderText(paste(tags$b("WELCOME TO", style = "font-size: 24px;"),
                                        tags$b("SuilluScope v1.0", style = "font-size: 24px; color: #D3AD0D"),
@@ -650,7 +651,7 @@ server<- function(input, output){
                                        "Isolates which cannot be cryopreserved are available from the authors", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
   ))
   
-#render shinyjs tool for citation pop up 
+  #render shinyjs tool for citation pop up 
   shinyjs::runjs('
     $("#tooltip_link").click(function() {
       if ($("#custom_tooltip").length > 0) {
@@ -742,16 +743,16 @@ server<- function(input, output){
       }
     }
     
-    #Create a new column in the with the formatted legend text
+    #create a new column in the with the formatted legend text
     dataset$Formatted_Legend <- sapply(dataset$Culture.code, format_legend_text)
     
-    #Define the color palette
+    #cefine the color palette
     species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191",
                         "#a794c7", "#ebdcff", "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6",
                         "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5", "#ff7c43", "#ffac82", "#ffd9c6",
                         "#ffa600", "#ffc171", "#fbddbe", "#962B09")
     
-    #Plot that shit
+    #plot that shit
     plot_ly(data = dataset, x = ~n_days, y = ~area, type = "scatter", mode="lines+markers", line = list(width = 2),
             legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
             color = ~Formatted_Legend, colors = species_colors,
@@ -766,29 +767,33 @@ server<- function(input, output){
       )
   })
   
-
-
+  
   
   ###
-  #METADATA TAB
+  ##METADATA TAB
   ###
-  # Reactive function to filter selected columns from the DB_slim dataframe
-  selected_columns <- reactive({
-    if (length(input$columns) > 0) {
-      # Filter the selected columns
-      DB_slim %>%
-        select(all_of(input$columns))
-    } else {
-      # If no columns selected, return an empty dataframe
-      data.frame()
-    }
+  
+  #define the choices and format with with spaces instead of periods for pretty rendering
+  choices <- setdiff(colnames(DB_slim), "Culture.code")
+  choices <- gsub("\\.", " ", choices) # Replace periods with spaces
+  
+  #update checkboxs for group choices when the app starts
+  observe({
+    updateCheckboxGroupInput(session, inputId = "columns", choices = choices)
   })
   
-  # Render the datatable based on the selected columns
+  #render the datatable based on the selected columns
   output$data_table <- renderDT({
     req(input$columns) # Ensure that a column is selected
+    
+    #modify column names of the DB_slim dataframe to match the pretty format
+    colnames(DB_slim) <- gsub("\\.", " ", colnames(DB_slim)) # Replace periods with spaces
+    
     selected_columns <- c("Culture.code", input$columns)
-    datatable(DB_slim[, selected_columns, drop = FALSE], options = list(pageLength = 10))
+    # Filter the selected columns, excluding "Culture.code"
+    selected <- setdiff(selected_columns, "Culture.code")
+    
+    datatable(DB_slim[, selected, drop = FALSE], options = list(pageLength = 10))
   })
   
   
