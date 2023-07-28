@@ -1,6 +1,8 @@
 ####
-#This script holds all of the code necessary to run the R shiny app, SuilluScope. 
-# this is version 1.0, released in August of 2023. 
+#This script contains all of the code necessary to run the R shiny app, SuilluScope. 
+#This is version 1.0, released in August of 2023. 
+#Version 1.0 highlights 25 strains of Suillus, using two different assays: culture phenotype on four different media types
+#and a replicated (n=4) growth rate assay conducted across 7 temperatures.
 ####
 
 #load libraries
@@ -18,6 +20,7 @@ library(lubridate) #to work with dates
 library(xts) #to work with dates
 library(data.table)
 library(DT) #for working with interactive datatables
+library(shinyjs)
 
 ##set seed for reproducibility
 set.seed(666)
@@ -42,9 +45,9 @@ DB_slim$seq.platform<- NULL
 DB_slim$Host.speices.for.assays<- NULL
 DB_slim$Range_and_region<- NULL
 
+
 #growth data
-#GD<-read.delim("MOCK_temperature_assay_2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
-GD<-read.delim("temperature_assay_2023_20s.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
+GD<-read.delim("temperature_assay_28Jul2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
 
 #fix names (from strain codes to the full species names + strain codes)
 lookup_table <- DB %>%
@@ -72,7 +75,7 @@ prep_data_stats<- function(input) {
   X <- as.data.table(input)
   #input_clean<- X[,lapply(.SD,mean),keys] #YOU ARE HERE CALCULATE SE. 
   
-
+  
   #make long
   input_clean_long <- X %>%
     pivot_longer(
@@ -114,13 +117,7 @@ C34<- prep_stats_test[prep_stats_test$Temp == 34,]
 C37<- prep_stats_test[prep_stats_test$Temp == 37,]
 
 
-
-#calculate mean and se for each temp
-#Function to get the mean and the mean standard error for each group
-#+++++++++++++++++++++++++
-# data = a data frame
-# varname  = the name of a column containing the variable to be summarized
-# groupnames = vector of column names to be used as grouping variables
+#function to calculate mean and se for each temp
 data_summary <- function(data, varname, groupnames){
   require(plyr)
   library(plotrix)
@@ -162,104 +159,212 @@ datafiles <- list(
 )
 
 
-###prep growth rate data for 20 degree control
+###prep growth rate data for growth rate calculation
 #get only 20 degree
+C10_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 10,]
 C20_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 20,]
+C24_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 24,]
+C27_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 27,]
+C30_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 30,]
+C34_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 34,]
+C37_all_data<- GD_clean_with_rep[GD_clean_with_rep$Temp == 37,]
 
-#make longer (keep rep codes)
-#make long
-input_clean_long_reps <- C20_all_data %>%
-  pivot_longer(
-    cols = -c("Temp", "Culture.code", "replicate"),
-    names_to = "date",
-    values_to = "area",
-    values_transform = list(area = as.numeric, Culture.code = as.character)
-  )
+
+#function to make longer (while keeping A-D rep codes)
+input_clean_long_reps<- function(data) {
+  cleaned_data <- data %>%
+    pivot_longer(
+      cols = -c("Temp", "Culture.code", "replicate"),
+      names_to = "date",
+      values_to = "area",
+      values_transform = list(area = as.numeric, Culture.code = as.character)
+    )
+  
+  return(cleaned_data)
+}
+
+#run function
+C10_all_data_long<- as.data.table(input_clean_long_reps(C10_all_data))
+C20_all_data_long<- as.data.table(input_clean_long_reps(C20_all_data))
+C24_all_data_long<- as.data.table(input_clean_long_reps(C24_all_data))
+C27_all_data_long<- as.data.table(input_clean_long_reps(C27_all_data))
+C30_all_data_long<- as.data.table(input_clean_long_reps(C30_all_data))
+C34_all_data_long<- as.data.table(input_clean_long_reps(C34_all_data))
+C37_all_data_long<- as.data.table(input_clean_long_reps(C37_all_data))
 
 #make data.table
-input_clean_long_reps<- as.data.table(input_clean_long_reps)
 
 #change date format to read as a date in lubridate and xts
-input_clean_long_reps$date2<- lubridate::parse_date_time(input_clean_long_reps$date, "dmy")
+#input_clean_long_reps$date2<- lubridate::parse_date_time(input_clean_long_reps$date, "dmy")
+C10_all_data_long$date2<- lubridate::parse_date_time(C10_all_data_long$date, "dmy")
+C20_all_data_long$date2<- lubridate::parse_date_time(C20_all_data_long$date, "dmy")
+C24_all_data_long$date2<- lubridate::parse_date_time(C24_all_data_long$date, "dmy")
+C27_all_data_long$date2<- lubridate::parse_date_time(C27_all_data_long$date, "dmy")
+C30_all_data_long$date2<- lubridate::parse_date_time(C30_all_data_long$date, "dmy")
+C34_all_data_long$date2<- lubridate::parse_date_time(C34_all_data_long$date, "dmy")
+C37_all_data_long$date2<- lubridate::parse_date_time(C37_all_data_long$date, "dmy")
+
 
 #change to number of days 
-days <- yday(input_clean_long_reps$date2) - 165 #first day was Jun 14 = day 0 (the day we inoculated, wich is 165 days into the year)
-input_clean_long_reps$n_days<- days
+#days <- yday(input_clean_long_reps$date2) - 165 #first day was Jun 14 = day 0 (the day we inoculated, which is 165 days into the year)
+C10_all_data_long$n_days <- yday(C10_all_data_long$date2) - 165 #first day was Jun 14 = day 0 (the day we inoculated, which is 165 days into the year)
+C20_all_data_long$n_days <- yday(C20_all_data_long$date2) - 165
+C24_all_data_long$n_days <- yday(C24_all_data_long$date2) - 165
+C27_all_data_long$n_days <- yday(C27_all_data_long$date2) - 165
+C30_all_data_long$n_days <- yday(C30_all_data_long$date2) - 165
+C34_all_data_long$n_days <- yday(C34_all_data_long$date2) - 165
+C37_all_data_long$n_days <- yday(C37_all_data_long$date2) - 165
+
 
 #clean up unnecessary cols
-input_clean_long_reps$date <- NULL
-input_clean_long_reps$date2 <- NULL
-input_clean_long_reps$Temp <- NULL
-
+C10_all_data_long <- C10_all_data_long %>% select(-date, -date2, -Temp)
+C20_all_data_long <- C20_all_data_long %>% select(-date, -date2, -Temp)
+C24_all_data_long <- C24_all_data_long %>% select(-date, -date2, -Temp)
+C27_all_data_long <- C27_all_data_long %>% select(-date, -date2, -Temp)
+C30_all_data_long <- C30_all_data_long %>% select(-date, -date2, -Temp)
+C34_all_data_long <- C34_all_data_long %>% select(-date, -date2, -Temp)
+C37_all_data_long <- C37_all_data_long %>% select(-date, -date2, -Temp)
 
 #calculate growth rate, group by each unique combination of Sp and replicate, sort by date for each group, and use lag to calculate the difference in area between that date and the one before it.
-growth_rates <- input_clean_long_reps %>%
+growth_rates10 <- C10_all_data_long %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+growth_rates20 <- C20_all_data_long %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+growth_rates24 <- C24_all_data_long %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+growth_rates27 <- C27_all_data_long %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+growth_rates30 <- C30_all_data_long %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+growth_rates34 <- C34_all_data_long %>%
+  group_by(Culture.code, replicate) %>%
+  group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
+growth_rates37 <- C37_all_data_long %>%
   group_by(Culture.code, replicate) %>%
   group_modify(~mutate(., increase_in_area = area - lag(area, default = first(area))))
 
+
 #Remove the grouping
-growth_rates <- ungroup(growth_rates)
-
-#get the average increase_in_area and se for each Sp and n_days combination
-df_average <- growth_rates %>%
-  group_by(Culture.code, n_days) %>%
-  do(data.frame(avg_increase = mean(.$increase_in_area),
-                std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
-  ungroup()
-
+growth_rates10<-ungroup(growth_rates10)
+growth_rates20<-ungroup(growth_rates20)
+growth_rates24<-ungroup(growth_rates24)
+growth_rates27<-ungroup(growth_rates27)
+growth_rates30<-ungroup(growth_rates30)
+growth_rates34<-ungroup(growth_rates34)
+growth_rates37<-ungroup(growth_rates37)
 
 
+####
+#Calculate increase in area per day at room temp. 
+###
+
+DF_for_paper<- growth_rates20
+
+#get all unique numbers of days between sampling points
+unique_n_days <- unique(DF_for_paper$n_days)
+
+#Function to calculate the number of days between n_days and the next lowest value
+get_next_lowest_n_days <- function(n_days) {
+  next_val_index <- which(unique_n_days < n_days)
+  if (length(next_val_index) == 0) {
+    next_lowest_val <- n_days[1]
+  } else {
+    next_lowest_val <- max(unique_n_days[next_val_index])
+  }
+  n_days - next_lowest_val
+}
+
+#run the function to add the new column 
+DF_for_paper <- DF_for_paper %>%
+  mutate(next_lowest_n_days = sapply(n_days, get_next_lowest_n_days))
+
+#calculate average increase per day for each replicate
+DF_for_paper$average_growth_per_day<- DF_for_paper$increase_in_area / DF_for_paper$next_lowest_n_days
+
+#remove NAs 
+DF_for_paper <- DF_for_paper[complete.cases(DF_for_paper[, "average_growth_per_day"]), ]
+
+#per strain, average over all replicates for each time point 
+group.means<-ddply(DF_for_paper,c("Culture.code","n_days"),summarise,ave=mean(average_growth_per_day))
+
+#calculate overall average for each strain 
+group.means.means<- aggregate(ave ~ Culture.code, group.means, mean)
+
+#get the row index with the highest value in the 'mean' column and print it
+#row_index_highest_mean <- which.max(group.means.means$ave)
+#print(group.means.means[row_index_highest_mean, ]) #18 Suillus quiescens FC197 90.26757
+
+#get the row index with the lowest value in the 'mean' column and print it
+#row_index_lowest_mean <- which.min(group.means.means$ave)
+#print(group.means.means[row_index_lowest_mean, ]) #21 Suillus spraguei EM44 17.26775
+
+#get the highest value at any time point. 
+#highest_overall <- group.means %>%
+#  group_by(Culture.code) %>%
+#  slice(which.max(ave))
+#View(highest_overall)
+
+
+
+####
+
+
+# 
+# #
+# #get the average increase_in_area and se for each Sp and n_days combination
+# df_average10 <- growth_rates10 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
+# 
+# df_average20 <- growth_rates20 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
+# 
+# df_average24 <- growth_rates24 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
+# 
+# df_average27 <- growth_rates27 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
+# 
+# df_average30 <- growth_rates30 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
+# 
+# df_average34 <- growth_rates34 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
+# 
+# df_average37 <- growth_rates37 %>%
+#   group_by(Culture.code, n_days) %>%
+#   do(data.frame(avg_increase = mean(.$increase_in_area),
+#                 std_error = sd(.$increase_in_area) / sqrt(length(.$increase_in_area)))) %>%
+#   ungroup()
 
 
 
 
-#run stats
-#test %>% rstatix::shapiro_test(area)
-#if p val non-significant = data has a pretty normal distribution
-
-
-#Test graph before adding it
-
-#test_plot<- ggplot(C10, aes(x = n_days, y = area, group = Culture.code, color = Culture.code)) + 
-#  geom_point(aes(color = Culture.code), size = 2) +
-#  geom_line(aes(color = Culture.code), size = .8) +
-#  scale_color_manual(values = c("#003f5c", 
-#                                "#668eaa",
-#                                "#c2e7ff",
-#                                "#2f4b7c",
-#                                "#8293bc",
-#                                "#d6e2ff",
-#                                "#665191", 
-#                                "#a794c7",
-#                                "#ebdcff",
-#                                "#a05195",
-#                                "#ce94c4",
-#                                "#fcd8f5",
-#                                "#d45087",
-#                                "#ec95b6",
-#                                "#ffd5e5",
-#                                "#f95d6a",
-#                                "#ff9d9e",
-#                                "#ffd6d5",
-#                                "#ff7c43",
-#                               "#ffac82",
-#                                "#ffd9c6",
-#                                "#ffa600",
-#                                "#ffc171",
-#                                "#fbddbe",
-#                                "#962B09")) +
-#  theme_minimal()+
-#  xlab("dpi")+ ylab("colony area (mm^2)")+
-#  ylab(bquote("Colony area "~(mm^2)))+
-#  ggtitle("S. hirtellus EM16")+
-#  geom_errorbar(aes(ymin=area-se, ymax=area+se, alpha=0.6), width=2, show.legend = FALSE,
-#                position=position_dodge(1)) 
-
-
-
-##############################
-
-##-----------create ui object-----------
+##########################################
+##-----------create ui object-----------##
+##########################################
 ui <- fluidPage(
   fluidRow( 
     column(3, img(src='Suilluscope_logo.png', align = "left", height="42%", width="42%", res = 128), style = "padding-top:6px; padding-bottom:6px; padding-left:25px; padding-right:0px; margin-right:-75px"),
@@ -312,14 +417,14 @@ ui <- fluidPage(
   }
 ")))
     ),
-
+    
     
     tabsetPanel(type = "tabs",
-#                tabPanel("HOME", fluidRow(
-#                  column(12, img(src='App_home.png', align = "left", height="42%", width="42%", res = 128), style = "padding-top:6px; padding-bottom:6px; padding-left:25px; padding-right:0px; margin-right:-75px")), htmlOutput(outputId ="home", style = "background-color:transparent; padding:20px; margin-top:10px")),
-tags$head(
-  tags$style(
-    HTML("
+                #                tabPanel("HOME", fluidRow(
+                #                  column(12, img(src='App_home.png', align = "left", height="42%", width="42%", res = 128), style = "padding-top:6px; padding-bottom:6px; padding-left:25px; padding-right:0px; margin-right:-75px")), htmlOutput(outputId ="home", style = "background-color:transparent; padding:20px; margin-top:10px")),
+                tags$head(
+                  tags$style(
+                    HTML("
         #home_bottom2 a, #home_right a {
           color: #DDC87B;
           text-decoration: none;
@@ -332,48 +437,63 @@ tags$head(
           margin-top: -15px; 
         }
       ")
+                  )
+                ),
+                
+                tabPanel("HOME",
+                         tags$div(
+                           class = "background-image-container",
+                           style = "background-image: url('App_home.png'); height: 300px;",
+                           fluidRow(
+                             column(
+                               width = 6, 
+                               htmlOutput(outputId ="home_left", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-right:355px; margin-left:-282px;")
+                             ),
+                             column(
+                               width = 3, 
+                               htmlOutput(outputId ="home_right", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-left:-270px; margin-right:-36px;")
+                             )
+                           ),
+
+
+useShinyjs(),
+
+fluidRow(
+  column(
+    width = 12,
+    div(
+      style = "position: relative;", 
+      img(src='lower_background.png', align = "center", height="60%", width="101%", res = 128),
+      div(
+        id = "citation_info",
+        class = "well well-lg",
+        style = "position: absolute; top: 10px; left: 10px; color: #4D4D4D; margin: 0; margin-top:5px; margin-left:450px; margin-right:450px; padding: 15px; background-color: rgba(0, 0, 0, .5); background-color: rgba(0, 0, 0, 0); border: 5px solid gray; border-radius: 20px",
+        tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"),
+        tags$br(),
+        "If you find SuilluScope useful in your own research, please cite the associated publication",
+        tags$a("HERE", href = "#", 
+               id = "tooltip_link",
+               style = "color: black; text-decoration: underline;"
+        ),"as well as the paper(s) that originally published the strains you used in your work (listed in the Metadata tab)."
+      )
+    )
   )
 ),
-
-tabPanel("HOME",
-         tags$div(
-           class = "background-image-container",
-           style = "background-image: url('App_home.png'); height: 300px;",
-           fluidRow(
-             column(
-               width = 6, 
-               htmlOutput(outputId ="home_left", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-right:355px; margin-left:-282px;")
-             ),
-             column(
-               width = 3, 
-               htmlOutput(outputId ="home_right", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-left:-270px; margin-right:-36px;")
-             )
-           ),
-           fluidRow(
-             column(
-               width = 12,
-               div(
-                 style = "position: relative;", 
-                 img(src='lower_background.png', align = "center", height="60%", width="101%", res = 128),
-                 htmlOutput(outputId ="home_bottom1", style = "position: absolute; top: 10px; left: 10px; color: #4D4D4D; margin: 0; margin-top:5px; margin-left:450px; margin-right:450px; padding: 15px; background-color: rgba(0, 0, 0, .5); background-color: rgba(0, 0, 0, 0); border: 5px solid gray; border-radius: 20px")
-               )
-             )
-           ),
-           fluidRow(
-             column(
-               width = 12,
-               div(
-                 style = "position: relative;", 
-                 htmlOutput(outputId ="home_bottom2", style = "position: absolute; top: 10px; left: 10px; color: black; margin: 0; margin-top:-150px; margin-left:30px; padding: 0")
-               )
-             )
-           )
-         )
-),           
+                           fluidRow(
+                             column(
+                               width = 12,
+                               div(
+                                 style = "position: relative;", 
+                                 htmlOutput(outputId ="home_bottom2", style = "position: absolute; top: 10px; left: 10px; color: black; margin: 0; margin-top:-150px; margin-left:30px; padding: 0")
+                               )
+                             )
+                           )
+                         )
+                ),           
                 tabPanel(
                   "MORPHOLOGY",
                   fluidRow(
-
+                    
                   ),
                   fluidRow(
                     column( 
@@ -435,7 +555,7 @@ tabPanel("HOME",
                       ),
                       htmlOutput(outputId ="textbox_morpholgy", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
                       
-),
+                    ),
                     column(
                       9, 
                       div(id = "plate_img"),
@@ -446,116 +566,72 @@ tabPanel("HOME",
                   br(),
                   htmlOutput(outputId = "morphology", width = "340px", style = "background-color:#E6E6E6; padding:18px")
                 ),
-
+                
                 tabPanel("TEMPERATURE", 
                          fluidRow(
-                  column(1, 
-                         style = "height:700px; width:33px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
-                  column(2, 
-                         style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
-                         br(),
-                         selectInput(inputId = "datafiles",
-                                     label = "SELECT TEMPERATURE",
-                                     choices = c("10°C" = "10", "20°C" = "20", "24°C" = "24", "27°C" = "27", "30°C" = "30", "34°C" = "34", "37°C" = "37")),
-                         htmlOutput(outputId ="textbox_temperature", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
-                  ),
-                  column(8, 
-                         plotlyOutput("temp_plot", height = "600px", width = "700px"),
-                         htmlOutput(outputId = "growth", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px"),
-                         offset = 1),
-                  
-                  )),
-
-tabPanel("GROWTH RATES", 
-         fluidRow(
-           column(11, 
-                  plotlyOutput("growth_rate_plot", height = "600px", width = "700px"),
-                  htmlOutput(outputId = "growth_rate", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px"),
-                  offset = 1),
-         )),
-                 
-                 
-tabPanel(
-  "METADATA",
-  htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:-40px"),
-  #titlePanel("Interactive Spreadsheet"),
-  sidebarLayout(
-    sidebarPanel(
-      # Checkbox group for column selection
-      style = "width: 300px;", # Adjust the width here (e.g., width: 150px;)
-      checkboxGroupInput(
-        "columns",
-        "SELECT COLUMNS TO DISPLAY",
-        choices = colnames(DB_slim),
-        selected = colnames(DB_slim)
-      )
-    ),
-    mainPanel(
-      style = "margin-left:-150px",
-      # Data table output
-      DTOutput("data_table")
-    )
-  )
-),
-
-# tabPanel(
-#   "METADATA",
-#   tags$style(
-#     HTML(".selectize-input { background-color: transparent important; }")
-#   ),
-#   htmlOutput(outputId = "metadata", style = "padding: 20px; margin-top: -40px;"),
-#   fluidRow(
-#     column(
-#       2,
-#       style = "height:700px; padding-left: 0px; padding-right: 0px; background-color: rgba(119, 120, 55, 0);",
-#       # Selection panel
-#       sidebarLayout(
-#         sidebarPanel(
-#           checkboxGroupInput(
-#             "columns",
-#             "Select Columns:",
-#             choices = colnames(DB_slim),
-#             selected = colnames(DB_slim),
-#             inline = FALSE # Set inline to FALSE for better spacing
-#           )
-#         ),
-#         mainPanel(NULL)
-#       )
-#     ),
-#     column(
-#       8,
-#       style = "padding-left: 0px; padding-right: 0px; background-color: rgba(119, 120, 55, 0.0);",
-#       # Data table output
-#       DTOutput("data_table")
-#     )
-#   )
-# )
-
-
-
-
-
-     
+                           column(1, 
+                                  style = "height:700px; width:33px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
+                           column(2, 
+                                  style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
+                                  br(),
+                                  selectInput(inputId = "datafiles",
+                                              label = "SELECT TEMPERATURE",
+                                              choices = c("10°C" = "10", "20°C" = "20", "24°C" = "24", "27°C" = "27", "30°C" = "30", "34°C" = "34", "37°C" = "37")),
+                                  htmlOutput(outputId ="textbox_temperature", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
+                           ),
+                           column(6, 
+                                  plotlyOutput("temp_plot", height = "600px", width = "900px"),
+                                  htmlOutput(outputId = "growth", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px; margin-left:-100px"),),
+                           column(3,
+                                  plotlyOutput("growth_rate_plot", height = "600px", width = "900px"),
+                                  htmlOutput(outputId = "growth_rate", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px")),
+                           
+                         )),
+                
+                
+                tabPanel(
+                  "METADATA",
+                  htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:-40px"),
+                  #titlePanel("Interactive Spreadsheet"),
+                  sidebarLayout(
+                    sidebarPanel(
+                      # Checkbox group for column selection
+                      style = "width: 300px;", # Adjust the width here (e.g., width: 150px;)
+                      checkboxGroupInput(
+                        "columns",
+                        "SELECT COLUMNS TO DISPLAY",
+                        choices = colnames(DB_slim),
+                        selected = colnames(DB_slim)
+                      )
+                    ),
+                    mainPanel(
+                      style = "margin-left:-150px",
+                      # Data table output
+                      DTOutput("data_table")
+                    )
+                  )
+                ),
          
-
     )
   )
 )
 
 
-##-----------create server object-----------
-######################
 
+
+##########################################
+##---------create server object---------##
+##########################################
 server<- function(input, output){ 
   #define 'HOME' page
   output$home_left <- renderText(paste(tags$b("WELCOME TO", style = "font-size: 24px;"),
                                        tags$b("SuilluScope v1.0", style = "font-size: 24px; color: #D3AD0D"),
                                        tags$br(),
-                                       "SuilluScope is an interactive, open access database for <i>Suillus</i> fungi, a model genus for ectomycorrhizal ecology.",
-                                       "There are extensive genomic resources available for", tags$i("Suillus"), "including more annotated full-genome assemblies 
-                                       than any other ectomycorrhizal group.",
-                                       "This database characterizes the phenotypic traits and responses of these genome-sequenced isolates, aiming to help researchers identify optimal 
-                                       culture conditions, predict and compare trait responses across diverse species within the genus, and empower further 
+                                       "SuilluScope is an interactive, open access database for <i>Suillus</i> fungi, a model genus for ectomycorrhizal ecology and evolution.",
+                                       "There are extensive genomic resources available for", tags$i("Suillus"), "including more annotated genome assemblies 
+                                       than for any other ectomycorrhizal group.",
+                                       "This platform proves data on the phenotypic traits and responses of these genome-sequenced isolates, aiming to help researchers identify optimal 
+                                       culture conditions, predict and compare trait responses across species, and empower further 
                                        research linking genotypes to phenotypes.",
                                        tags$br()
   ))
@@ -563,34 +639,51 @@ server<- function(input, output){
   
   output$home_right<- renderText(paste(tags$b("ISOLATE COLLECTION", style = "font-size: 24px; color: #D3AD0D"),
                                        tags$br(),
-                                       "All isolates used in the database are from the", tags$i("Suillus"), "genome Culture.code collection, curated at Duke University.", 
+                                       "All isolates used in the database are from the", tags$i("Suillus"), "genome culture collection, curated at Duke University.", 
                                        "For more information on the <i>Suillus</i> system, please visit",
                                        tags$a(href = "http://www2.hawaii.edu/~nn33/suillus/", "The International ", tags$i("Suillus"), " Consortium.", target = "_blank"),
-                                       "Genomic resources for these Culture.codes are available on the MycoCosm ",tags$i("Suillus"), 
+                                       "Genomic resources for these cultures are available on the MycoCosm ",tags$i("Suillus"), 
                                        tags$a(href="https://mycocosm.jgi.doe.gov/Suillus/Suillus.info.html", "web portal", target="_blank"), 
                                        "opperated by DOE Joint Genome Institute.",
-                                       "Isolates amenable to cryopreservation are publicly available as part of the", 
+                                       "Isolates amenable to cryopreservation will soon be avalible as part of the", 
                                        tags$a(href="https://nrrl.ncaur.usda.gov/", "Agricultural Research Culture Collection (NRRL).", target="_blank"), 
-                                       "Isolates which cannot be cryopreserved are available by contacting us", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
+                                       "Isolates which cannot be cryopreserved are available from the authors", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
   ))
   
-  output$home_bottom1  <- renderText(paste(tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"), tags$br(), 
-                                           "If you find SuilluScope useful in your own research, please cite the assocaited publication: <>", 
-                                           tags$br(), 
-                                           "If you use data on a specific genome Culture.code in your own research, please cite SuilluScope as well as the paper that originally published that Culture.code (listed in the Metadata tab)." 
-  )) 
-  output$home_bottom2 <- renderText(paste("This is version v1.0 of the database, released on 25.July.2023",
-                                         tags$br(),
-                                         "SuilluScope was built using the open source programming language", 
-                                         tags$a(href="https://www.r-project.org/about.html", "R", target="_blank"), 
-                                         "with reactive programming via", 
-                                         tags$a(href="https://shiny.rstudio.com/", "R shiny", target ="_blank"),
-                                         tags$br(),
-                                         "All of the code necessary to run the program is publicly available at", tags$a(href="https://github.com/MycoPunk/SUILLUSAPP", "the SuilluScope GitHub.", target= "_blank"), 
-                                         "Please report issues to the git issues page",
-                                         tags$br(),
-                                         "If you have feature requests or a published dataset that you would like us to consider adding to this site, please contact the author", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
-
+#render shinyjs tool for citation pop up 
+  shinyjs::runjs('
+    $("#tooltip_link").click(function() {
+      if ($("#custom_tooltip").length > 0) {
+        // If tooltip is already visible, hide it
+        $("#custom_tooltip").remove();
+      } else {
+        // If tooltip is hidden, show it to the right of the link
+        var tooltipContent = "<div style=\'width: 350px; word-wrap: break-word;\'> <b><i>Suillus</i>: an emerging model for the study of ectomycorrhizal ecology and evolution.</b> <br>Lofgren L, Nguyen NH, Kennedy P, Pérez-Pazo4 E, Fletcher J, Liao H-L, Wang H, Zhang K, Ruytinx J, Smith A, Ke Y-H, Cotter H.V., Engwall E, Hameed K.M., Vilgalys R, Branco S. <br><i>In review</i></div>";
+        var tooltipHtml = \'<div id="custom_tooltip" style="position: absolute; top: 50%; left: 100%; transform: translate(-5px, -50%); background-color: white; border: 1px solid black; padding: 10px; max-width: 400px;">\' + tooltipContent + \'</div>\';
+        $(this).parent().append(tooltipHtml);
+      }
+    });
+    
+    // Hide tooltip when clicking outside of it
+    $(document).on("click", function(event) {
+      if (!$(event.target).closest("#tooltip_link, #custom_tooltip").length) {
+        $("#custom_tooltip").remove();
+      }
+    });
+  ')
+  
+  output$home_bottom2 <- renderText(paste("This is version v1.0 of the database, released in beta on 28.July.2023",
+                                          tags$br(),
+                                          "SuilluScope was built using the open source programming language", 
+                                          tags$a(href="https://www.r-project.org/about.html", "R", target="_blank"), 
+                                          "with reactive programming via", 
+                                          tags$a(href="https://shiny.rstudio.com/", "R shiny", target ="_blank"),
+                                          tags$br(),
+                                          "All of the code necessary to run the program is publicly available at", tags$a(href="https://github.com/MycoPunk/SUILLUSAPP", "the SuilluScope GitHub.", target= "_blank"), 
+                                          "Please report issues to the git issues page",
+                                          tags$br(),
+                                          "If you have feature requests or a published dataset that you would like us to consider adding to this site, please contact the author", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
+                                          
   ))
   
   
@@ -613,173 +706,97 @@ server<- function(input, output){
                                                  and colony area was calculated for each time point using the program imageJ. "
   ))
   
-
-
   
-
-### 
-#TEMPERATURE PLOT
-###
   
-#use datafiles list of DFs to make the DF choice reactive and filter the data by temperature
-    get_filtered_data <- function(temp) {
-      switch(temp,
-             "10" = C10,
-             "20" = C20,
-             "24" = C24,
-             "27" = C27,
-             "30" = C30,
-             "34" = C34,
-             "37" = C37)
+  
+  
+  #### 
+  #TEMPERATURE PLOT
+  ####
+  #use datafiles list of DFs to make the DF choice reactive and filter the data by temperature
+  get_filtered_data <- function(temp) {
+    switch(temp,
+           "10" = C10,
+           "20" = C20,
+           "24" = C24,
+           "27" = C27,
+           "30" = C30,
+           "34" = C34,
+           "37" = C37)
+  }
+  
+  
+  #set rendering variables for formatting
+  output$temp_plot <- renderPlotly({
+    dataset <- get_filtered_data(input$datafiles)
+    
+    #Function to format the legend text with italics for genus / specific ep.
+    format_legend_text <- function(culture_code) {
+      words <- strsplit(culture_code, " ")[[1]]
+      if (length(words) >= 3) {
+        return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
+      } else if (length(words) == 2) {
+        return(paste0("<i>", words[1], " ", words[2], "</i>"))
+      } else {
+        return(culture_code)
+      }
     }
     
+    #Create a new column in the with the formatted legend text
+    dataset$Formatted_Legend <- sapply(dataset$Culture.code, format_legend_text)
     
-#plot that shit
-    output$temp_plot <- renderPlotly({
-      dataset <- get_filtered_data(input$datafiles)
-      
-#Function to format the legend text with italics for genus / specific ep.
-      format_legend_text <- function(culture_code) {
-        words <- strsplit(culture_code, " ")[[1]]
-        if (length(words) >= 3) {
-          return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
-        } else if (length(words) == 2) {
-          return(paste0("<i>", words[1], " ", words[2], "</i>"))
-        } else {
-          return(culture_code)
-        }
-      }
-      
-#Create a new column in the with the formatted legend text
-      dataset$Formatted_Legend <- sapply(dataset$Culture.code, format_legend_text)
-   
-#Define the color palette
-species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191",
-                          "#a794c7", "#ebdcff", "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6",
-                          "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5", "#ff7c43", "#ffac82", "#ffd9c6",
-                          "#ffa600", "#ffc171", "#fbddbe", "#962B09")
-      
-         
-#Plot
-      plot_ly(data = dataset, x = ~n_days, y = ~area, line = list(width = 2),
-              legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
-              color = ~Formatted_Legend, colors = species_colors,
-              hoverinfo = "text", text = ~Culture.code,
-              showlegend = TRUE) %>%
-        layout(
-          title = "",
-          xaxis = list(title = "days post inoculation"),
-          yaxis = list(title = HTML("colony area (mm<sup>2</sup>)")),
-          legend = list(title = "Culture.code"),
-          hovermode = "closest"
-        )
-    })
+    #Define the color palette
+    species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191",
+                        "#a794c7", "#ebdcff", "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6",
+                        "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5", "#ff7c43", "#ffac82", "#ffd9c6",
+                        "#ffa600", "#ffc171", "#fbddbe", "#962B09")
     
-    
-
-#click the plot to update line visibility
-    observeEvent(event_data("plotly_click", source = "temp_plot"), {
-      selected_Culture.code <- event_data("plotly_click", source = "temp_plot")$y
-      dataset <- get_filtered_data(input$datafiles)
-      
-#change visibility for the selected Culture.code
-      if (is.null(selected_Culture.code)) {
-        visible <- TRUE
-      } else {
-        visible <- ifelse(dataset$Culture.code %in% selected_Culture.code, FALSE, TRUE)
-      }
-      
-      plotlyProxy("temp_plot") %>%
-        plotlyProxyInvoke("restyle", list(visible = visible), list(2)) %>%
-        plotlyProxyInvoke("restyle", list(visible = visible), list(3))
-    })
+    #Plot that shit
+    plot_ly(data = dataset, x = ~n_days, y = ~area, type = "scatter", mode="lines+markers", line = list(width = 2),
+            legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
+            color = ~Formatted_Legend, colors = species_colors,
+            hoverinfo = "text", text = ~Culture.code,
+            showlegend = TRUE) %>%
+      layout(
+        title = "",
+        xaxis = list(title = "days post inoculation"),
+        yaxis = list(title = HTML("colony area (mm<sup>2</sup>)")),
+        legend = list(title = "Culture.code"),
+        hovermode = "closest"
+      )
+  })
   
 
 
-#
-#output$growth_rate_plot <- renderPlot({
-#  ggplot(df_average, aes(x = as.factor(n_days), y = avg_increase, color = Culture.code)) +
-#    geom_point(position = position_jitter(width = 0.2), size = 3) +
-#    geom_errorbar(aes(ymin = avg_increase - std_error, ymax = avg_increase + std_error),
-#                  width = 0.2, position = position_dodge(width = 0.2)) +
-#    geom_smooth(method = "loess", se = FALSE, size = 1, aes(group = Culture.code, color = Culture.code)) +
-#    labs(x = "n_days", y = "Average Increase in Area", title = "Average Increase in Area by n_days and Sp") +
-#    theme_minimal() +
-#    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Rotate x-axis labels for better readability
-#    scale_color_manual(values = species_colors)
-#})
-
-
-###
-#GROWTH RATE PLOT
-###
-    
-    output$growth_rate_plot <- renderPlotly({
-      species_colors <- c("#003f5c", "#668eaa", "#c2e7ff", "#2f4b7c", "#8293bc", "#d6e2ff", "#665191",
-                          "#a794c7", "#ebdcff", "#a05195", "#ce94c4", "#fcd8f5", "#d45087", "#ec95b6",
-                          "#ffd5e5", "#f95d6a", "#ff9d9e", "#ffd6d5", "#ff7c43", "#ffac82", "#ffd9c6",
-                          "#ffa600", "#ffc171", "#fbddbe", "#962B09")
-      
-      #Function to format the legend text with italics for genus / specific ep.(again)
-      format_legend_text <- function(culture_code) {
-        words <- strsplit(culture_code, " ")[[1]]
-        if (length(words) >= 3) {
-          return(paste0("<i>", words[1], " ", words[2], "</i>", " ", paste(words[-c(1, 2)], collapse = " ")))
-        } else if (length(words) == 2) {
-          return(paste0("<i>", words[1], " ", words[2], "</i>"))
-        } else {
-          return(culture_code)
-        }
-      } 
-      
-      #fun function for format legend
-      df_average$Formatted_Legend <- sapply(df_average$Culture.code, format_legend_text)
-      
-      
-      # Create the main plot with markers (dots) only
-      plot_ly(data = df_average, x = ~as.factor(n_days), y = ~avg_increase, 
-              legendgroup = ~Formatted_Legend, name = ~Formatted_Legend,
-              color = ~Formatted_Legend, colors = species_colors,
-              hoverinfo = "text", text = ~Culture.code,
-              showlegend = FALSE) %>%
-        add_trace(type = "scatter", mode = "markers", 
-                  marker = list(size = 4)) %>%
-        add_ribbons(ymin = ~(avg_increase - std_error), ymax = ~(avg_increase + std_error),
-                    fill = "rgba(0,100,80,0.2)", line = list(color = 'transparent'),
-                    showlegend = FALSE) %>%
-        add_lines(showlegend = TRUE) %>%
-        layout(title = "",
-               xaxis = list(title = "days post-inoculation"),
-               yaxis = list(title = "average growth rate"),
-               legend = list(title = "Culture.code"),
-               hovermode = "closest")
-      
-    })
-
-
-###METADATA TAB
-# Reactive function to filter selected columns from the DB_slim dataframe
-selected_columns <- reactive({
-  if (length(input$columns) > 0) {
-    # Filter the selected columns
-    DB_slim %>%
-      select(all_of(input$columns))
-  } else {
-    # If no columns selected, return an empty dataframe
-    data.frame()
-  }
-})
-
-# Render the datatable based on the selected columns
-output$data_table <- renderDT({
-  req(input$columns) # Ensure that a column is selected
-  selected_columns <- c("Culture.code", input$columns)
-  datatable(DB_slim[, selected_columns, drop = FALSE], options = list(pageLength = 10))
-})
-
-
-
+  
+  ###
+  #METADATA TAB
+  ###
+  # Reactive function to filter selected columns from the DB_slim dataframe
+  selected_columns <- reactive({
+    if (length(input$columns) > 0) {
+      # Filter the selected columns
+      DB_slim %>%
+        select(all_of(input$columns))
+    } else {
+      # If no columns selected, return an empty dataframe
+      data.frame()
+    }
+  })
+  
+  # Render the datatable based on the selected columns
+  output$data_table <- renderDT({
+    req(input$columns) # Ensure that a column is selected
+    selected_columns <- c("Culture.code", input$columns)
+    datatable(DB_slim[, selected_columns, drop = FALSE], options = list(pageLength = 10))
+  })
+  
+  
+  
 }
 
-###run as app
+
+##########################################
+##-----------run as app-----------
+##########################################
 shinyApp(ui = ui, server = server)
