@@ -1,6 +1,6 @@
 ##########################################
 #This script contains all of the code necessary to run the R shiny app, SuilluScope. 
-#This is version 1.0b (beta), released in August of 2023. 
+#This is version 1.0, released in August of 2023. 
 #Version 1.0 highlights 25 strains of Suillus, using two different assays: culture phenotype on four different media types
 #and a replicated (n=4) growth rate assay conducted across 7 temperatures.
 ##########################################
@@ -27,7 +27,7 @@ library(dplyr)
 set.seed(666)
 
 #set wd
-#setwd("~/Desktop/SuilluScope")
+setwd("~/Desktop/SuilluScope")
 
 #Metadata
 DB<-read.delim("Suillus_app_metadata.txt", header = TRUE, sep = "\t", fill = TRUE, strip.white = TRUE, check.names = TRUE)
@@ -49,6 +49,7 @@ DB_slim$Range.and.region<- NULL
 
 
 #growth data
+#GD<-read.delim("temperature_assay_28Jul2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
 GD<-read.delim("temperature_assay_21Aug2023.csv", header = TRUE, sep = ",", fill = TRUE, strip.white = TRUE, check.names = FALSE)
 
 
@@ -368,233 +369,195 @@ group.means.means<- aggregate(ave ~ Culture.code, group.means, mean)
 ##########################################
 ##-----------create ui object-----------##
 ##########################################
-ui = navbarPage(
-  fluidRow(
-    column(3, img(src='Suilluscope_logo.png', align = "left", height="110px", width="110px", res = 128), style = "padding-top:0px; padding-bottom:20px; padding-left:10px; padding-right:0px; margin-right:-75px", class = "logo-column"),
-    column(9,
-           div(id = "home_left"),
-           div(id = "home_right"),
-           tags$head(tags$style(HTML("
-             .navbar, .navbar-collapse {
-               background-color: white;
-               border: none;
-               margin-bottom: 12px; /* note, this is how you adjust the space between the nav row and the rest of the page */
-             }
+ui <- fluidPage(
+  tags$style(
+    HTML("
+      .static-row {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        display: inline-block;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0px; /* Adjust padding as needed */
+        background-color: white; /* Add background color if needed */
+        z-index: 999;
+      }
+      .logo {
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 0px; /* Adjust margin as needed */
+      }
+            .tabbable > .nav {
+        display: flex;
+        align-items: center;
+      }
+      .tabbable > .nav > li {
+        padding-right: 48px;
+        margin-top: -150px;
+        margin-left: 150px;
 
-             .navbar .nav {
-               padding-left: 200px; 
-               background-color: white;
-               margin-top: 40px;
-               margin-bottom: 25px;
-             }
-             .tabbable > .nav {
-               padding-top: 60px;
-               background-color: white;
-             }
-             .tabbable > .nav > li[class=active] > a {
-               color: white;
-               background-color: #666666;
-               width: 130px;
-               height: 35px;
-               border-radius: 0px;
-               font-family: Arial;
-               font-size: 15px;
-               padding-bottom: 6px;
-               display: flex;
-               align-items: center;
-               justify-content: center;
-             }
-             .tabbable > .nav > li > a {
-               color: black;
-               background-color: white;
-               width: 130px;
-               height: 35px;
-               border-radius: 0px;
-               font-family: Arial;
-               font-size: 15px;
-               padding-bottom: 6px;
-               display: flex;
-               align-items: center;
-               justify-content: center;
-               white-space: nowrap;
-             }
-             .tabbable > .nav > li > a:hover {
-               color: black;
-               background-color: #E6E6E6;
-               width: 130px;
-               height: 35px;
-               border-radius: 0px;
-               font-family: Arial;
-               font-size: 15px;
-               padding-bottom: 6px;
-               display: flex;
-               align-items: center;
-               justify-content: center;
-             }
-             .tabbable > .nav > li {
-               padding-right: 48px;
-             }
-             .logo-column {
-               margin-bottom: 20px; 
-             }
-             #home_left a, #home_right a{
-               color: #DDC87B !important; /* Set the link color to yellow */
-               text-decoration: none;
-             }
-            #home_bottom2 {
-               color: black !important; 
-               text-decoration: none;
-             }
-              #home_bottom2 a {
-               color: #DDC87B !important; /* Set the link color to yellow */
-               text-decoration: underline;
-             }
-             @media (max-width: 767px) { /* Apply styles only mobile < than 768px width */
-               .navbar {
-                 margin-bottom: 100px; 
-               }
-               .logo-column {
-                 margin-bottom: 30px; 
-               }
-               .background-image-container {
-                 height: auto;
-                 margin-bottom: 50px;
-               }
-               .tab-content .tab-pane {
-                 padding: 0; /* Remove padding for tab content */
-               }
-               .html-widget {
-                 padding: 10px; 
-               }
-            @media (max-width: 768px) {
-              .image-column {
-              width: 100%; /* Take up full width on mobile */
-              }
-              }
-            @media (max-width: 768px) {
-              .green-column {
-              width: 100%; /* Take up full width on mobile*/
-              }
-              }
-             #data_table_container table {
-             width: 100%; /* so the table takes up 100% width of its container */
-             max-width: none; 
-             }
-             @media (max-width: 768px) {
-             #data_table_container table {
-             font-size: 12px; /* Adjust font size for mobile */
-             margin-left: 150px; /* Adjust margin for mobile, since we start with it nudged to the left for desktop */
-             }
-             }
-}
-           ")), 
-           )
-    )
-  )
-  
-  
-  ,
-  
-  tabPanel("HOME",
-           tags$div(
-             class = "background-image-container-top",
-             fluidRow(
-               column(
-                 width = 6,
-                 htmlOutput(outputId ="home_left", class = "html-widget", style = "background-color: rgba(0, 0, 0, 0.6); color: white; padding:20px; margin-top:35px; margin-bottom:35px; margin-right:60px; margin-left:60px;")
-               ),
-               column(
-                 width = 6,
-                 htmlOutput(outputId ="home_right", class = "html-widget", style = "background-color: rgba(0, 0, 0, 0.6); color: white; padding:20px; margin-top:35px; margin-bottom:35px; margin-left:60px; margin-right:60px;")
-               )
-             )
-           ),
-           useShinyjs(),
-           tags$div(
-             class = "background-image-container-bottom",
-             fluidRow(
-               column(
-                 width = 12,
-                 div(
-                   id = "citation_info",
-                   class = "well well-lg",
-                   style = "position: relative; color: #4D4D4D; margin: 0 auto; max-width: 600px; padding: 15px; background-color: rgba(0, 0, 0, .1); border: 5px solid gray; border-radius: 20px; margin-top:35px; margin-bottom:135px", 
-                   tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"),
-                   tags$br(),
-                   "If you find SuilluScope useful in your own research, please cite the associated publication",
-                   tags$a("HERE", href = "#",
-                          id = "tooltip_link",
-                          style = "color: black; text-decoration: underline;"
-                   ),"as well as the paper(s) that originally published the strains you used in your work (listed in the Metadata tab)."
-                 )
-               ),
-               column(
-                 width = 12,
-                 div(
-                   style = "position: relative;", 
-                   htmlOutput(outputId ="home_bottom2", style = "color: black; margin-left: 30px; margin-right: 30px; margin-bottom:15px")
-                 )
-               )
-             )
-           ),
-           tags$head(tags$style(HTML("
-    .background-image-container-top {
-      background-image: url('background_top.png');
-      background-size: cover;
-    }
-    .background-image-container-bottom {
-      background-image: url('background_bottom.png');
-      background-size: cover;
-      margin-top: -1px; /* to remove the white line between the two background images */
-    }
-  ")))
+      }
+    ")
   ),
   
-  
-  
-  tabPanel(
-    "MORPHOLOGY",
-    fluidRow(  tags$style(
-      HTML(
-        "@media (max-width: 768px) {
-         .image-column {
-           width: 100%;
-           padding-left: 0;
-           padding-right: 0;
-         }}
-
-         #plate_img {
-           padding-left: 0;
-           padding-right: 15px;
-           min-width: 350px;
-           margin-left: 25px
-         }
-         
-         .desktop-only {
-            display: none;
-          }
-          
-          .mobile-only {
-            display: block;
-          }
-      }"
-      )
+  div(class = "static-row",
+      div(class = "logo",
+       img(src='Suilluscope_logo.png', align = "right", 
+           height="120px", width="120px", style = "max-height: 120px;", res = 128),
+               style = "padding-top:6px; padding-bottom:6px; padding-left:10px; padding-right:0px; margin-right:-75px"),
+        div(class = "tabtable", 
+            style = "padding-top:-100px; padding-bottom:6px; padding-left:200px; padding-right:0px",
+               tags$head(tags$style(HTML("
+#               .tabbable > .nav {
+#                padding-top: 0;
+#                display: flex;
+#                align-items: center;
+#              }
+#              .tabbable > .nav > li[class=active] > a {
+#    color: white;
+#    background-color: #666666;
+#    width: 130px;
+#    height: 35px;
+#    border-radius: 0px;
+#    font-family: Arial;
+#    font-size: 15px;
+#    padding-bottom: 6px;
+#    display: flex;
+#    align-items: center;
+#    justify-content: center;
+#  }
+#  .tabbable > .nav > li > a {
+#    color: black;
+#    background-color: white;
+#    width: 130px;
+#    height: 35px;
+#    border-radius: 0px;
+#    font-family: Arial;
+#    font-size: 15px;
+#    padding-bottom: 6px;
+#    display: flex;
+#    align-items: center;
+#    justify-content: center;
+#    white-space: nowrap;
+#  }
+#  .tabbable > .nav > li > a:hover {
+#    color: black;
+#    background-color: #E6E6E6;
+#    width: 130px;
+#    height: 35px;
+#    border-radius: 0px;
+#    font-family: Arial;
+#    font-size: 15px;
+#    padding-bottom: 6px;
+#    display: flex;
+#    align-items: center;
+#    justify-content: center;
+#  }
+#  .tabbable > .nav > li {
+#    padding-right: 48px;
+#  }
+")))
     ),
-    column( 
-      3, 
-      class = "image-column col-md-3 col-12",
-      style = "height: 700px; background-color: rgba(119,120,55,0.5); padding-left: 25px; padding-right: 20px; margin-bottom: -600px; margin-left: 15px; margin-right: -15px",
-      br(),
-      selectizeInput(
-        inputId = "Culture.code_image",
-        label = "SELECT STRAIN",
-        multiple = FALSE,
-        choices = c("", DB$Full.Name),
-        options = list(
-          openOnFocus = FALSE,
-          maxItems = 1,
-          render = I(
-            '{
+    
+    
+    tabsetPanel(type = "tabs",
+                #                tabPanel("HOME", fluidRow(
+                #                  column(12, img(src='App_home.png', align = "left", height="42%", width="42%", res = 128), style = "padding-top:6px; padding-bottom:6px; padding-left:25px; padding-right:0px; margin-right:-75px")), htmlOutput(outputId ="home", style = "background-color:transparent; padding:20px; margin-top:10px")),
+                tags$head(
+                  tags$style(
+                    HTML("
+        #home_bottom2 a, #home_right a {
+          color: #DDC87B;
+          text-decoration: none;
+        }
+        .background-image-container {
+          background-size: cover;
+          background-position: center;
+                              min-width: 1200px;
+                    width: auto !important;
+          background-repeat: no-repeat;
+          position: static;
+          margin-top: -15px; 
+        }
+      ")
+                  )
+                ),
+                
+                tabPanel("HOME",
+                         tags$div(
+                           class = "background-image-container",
+                           style = "background-image: url('App_home.png'); height: 300px;",
+                           fluidRow(
+                             column(
+                               width = 6, 
+                               htmlOutput(outputId ="home_left", style = "background-color: rgba(0, 0, 0, 0.6); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-right:355px; margin-left:-282px;")
+                             ),
+                             column(
+                               width = 3, 
+                               htmlOutput(outputId ="home_right", style = "background-color: rgba(0, 0, 0, 0.6); color: white; padding:20px; margin-top:54px; margin-bottom:35px; margin-left:-270px; margin-right:-36px;")
+                             )
+                           ),
+                           
+                           
+                           useShinyjs(),
+                           
+                           fluidRow(
+                             column(
+                               width = 12,
+                               div(
+                                 style = "position: relative;", 
+                                 img(src='lower_background.png', align = "center", height="60%", width="101%", res = 128),
+                                 div(
+                                   id = "citation_info",
+                                   class = "well well-lg",
+                                   style = "position: absolute; top: 10px; left: 10px; color: #4D4D4D; margin: 0; margin-top:5px; margin-left:450px; margin-right:450px; padding: 15px; background-color: rgba(0, 0, 0, .5); background-color: rgba(0, 0, 0, 0); border: 5px solid gray; border-radius: 20px",
+                                   tags$b("HOW TO CITE", style = "font-size: 24px; color: #666666"),
+                                   tags$br(),
+                                   "If you find SuilluScope useful in your own research, please cite the associated publication",
+                                   tags$a("HERE", href = "#", 
+                                          id = "tooltip_link",
+                                          style = "color: black; text-decoration: underline;"
+                                   ),"as well as the paper(s) that originally published the strains you used in your work (listed in the Metadata tab)."
+                                 )
+                               )
+                             )
+                           ),
+                           fluidRow(
+                             column(
+                               width = 12,
+                               div(
+                                 style = "position: relative;", 
+                                 htmlOutput(outputId ="home_bottom2", style = "position: absolute; top: 10px; left: 10px; color: black; margin: 0; margin-top:-150px; margin-left:30px; padding: 0")
+                               )
+                             )
+                           )
+                         )
+                ),           
+                tabPanel(
+                  "MORPHOLOGY",
+                  fluidRow(
+                    
+                  ),
+                  fluidRow(
+                    column( 
+                      1, 
+                      style = "height:700px; width:33px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), #little buffer col.
+                    column( 
+                      2, 
+                      style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
+                      br(), 
+                      selectizeInput(
+                        inputId = "Culture.code_image",
+                        label = "SELECT STRAIN",
+                        multiple = FALSE,
+                        choices = c("", DB$Full.Name),
+                        options = list(
+                          openOnFocus = FALSE,
+                          maxItems = 1,
+                          render = I(
+                            '{
             option: function(item, escape) {
               if (item.label === "") {
                 return "<div data-value=\'" + escape(item.value) + "\'></div>";
@@ -614,147 +577,90 @@ ui = navbarPage(
               }
             }
           }'
-          ),
-          onChange = I(
-            'function(value) {
-    if (value !== "") {
-      var lastWord = value.split(" ").pop();
-      var imageName = lastWord + ".png";
-      var imagePath = imageName;
-      var img = new Image();
-      img.src = imagePath;
-      img.setAttribute("width", "100%");  // Set width to 100%
-      var targetDiv = document.getElementById("plate_img");
-      targetDiv.innerHTML = "";
-      targetDiv.appendChild(img);
-    } else {
-      var targetDiv = document.getElementById("plate_img");
-      targetDiv.innerHTML = "";
-    }
-  }'
-          )
-          
-        )
-      ),
-    ),useShinyjs(),
-    column(
-      9,
-      class = "image-column",
-      div(id = "plate_img"),
-    ),
-    div(
-      id = "textbox_morpholgy",
-      class = "well well-lg",
-      style = "position: absolute; bottom: 0; color: #4D4D4D; margin: 0 auto; width: auto; padding: 15px; background-color: #A8A78A; border: 0px solid gray; border-radius: 20px; margin-bottom: 0px; margin-top: -250; margin-left: 34px; max-width: 320px",
-      tags$a("Methods", href = "#",
-             id = "textbox_morphology_link",
-             style = "color: black; text-decoration: underline; font-weight: bold;"
-      ),
-      div(
-        id = "textbox_morpholgy_content",
-        style = "display: none; max-height:300px; width: auto; overflow-y: auto"
-      )
-    )
-    ),
-  )
-  ,
-  
-  
-  
-  tabPanel(
-    "TEMPERATURE",
-    fluidRow(  tags$style(
-      HTML(
-        "@media (max-width: 768px) {
-         .green-column {
-           width: 100%;
-           padding-left: 0;
-           padding-right: 0;
-         }
-         
-         #temp_img {
-           padding-left: 0;
-           padding-right: 0;
-           min-width: 350px;
-         }
-         
-         .desktop-only {
-            display: none;
-         }
-         
-         .mobile-only {
-            display: block;
-         }
-         
-         #temp_plot {
-            max-height: 300px; 
-         }
-      }"
-      )
-    ),
-    column( 
-      3, 
-      class = "image-column col-md-3 col-12",
-      style = "height: 700px; background-color: rgba(119,120,55,0.5); padding-left: 25px; padding-right: 20px; margin-bottom: -600px; margin-left: 15px; margin-right: -15px",
-      br(),
-      selectInput(
-        inputId = "datafiles",
-        label = "SELECT TEMPERATURE",
-        choices = c("10°C" = "10", "20°C" = "20", "24°C" = "24", "27°C" = "27", "30°C" = "30", "34°C" = "34", "37°C" = "37")
-      )
-      ,
-    ),useShinyjs(),
-    column(
-      9,
-      class = "green-column",
-      div(id = "temp_img"),
-      plotlyOutput("temp_plot", height = "500px")
-    ),
-    div(
-      id = "textbox_temperature",
-      class = "well well-lg",
-      style = "position: absolute; bottom: 0; color: #4D4D4D; margin: 0 auto; width: auto; padding: 15px; background-color: #A8A78A; border: 0px solid gray; border-radius: 20px; margin-bottom: 0px; margin-top: -250; margin-left: 34px; max-width: 320px",
-      tags$a("Methods", href = "#",
-             id = "textbox_temperature_link",
-             style = "color: black; text-decoration: underline; font-weight: bold;"
-      ),
-      div(
-        id = "textbox_temperature_content",
-        style = "display: none; max-height:300px; width: auto; overflow-y: auto"
-      )
-    )
-    ),
-  )
-  ,
-  
-  
-  
-  tabPanel(
-    "METADATA",
-    htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:-40px"),
-    sidebarLayout(
-      sidebarPanel(
-        # Checkbox group for column selection
-        style = "width: 300px;", # Adjust the width here (e.g., width: 150px;)
-        checkboxGroupInput(
-          "columns",
-          "SELECT COLUMNS TO DISPLAY",
-          choices = colnames(DB_slim),
-          selected = colnames(DB_slim)
-        )
-      ),
-      #render data table
-      mainPanel(
-        div(
-          style = "margin-left:-150px",
-          id = "main_panel_content",
-          div(DTOutput("data_table"), id = "data_table_container"))
-      )
+                          ),
+                          onChange = I(
+                            'function(value) {
+            if (value !== "") {
+              var lastWord = value.split(" ").pop();
+              var imageName = lastWord + ".png";
+              var imagePath = imageName;
+              var img = new Image();
+              img.src = imagePath;
+              img.setAttribute("width", "150%");
+              var targetDiv = document.getElementById("plate_img");
+              targetDiv.innerHTML = "";
+              targetDiv.appendChild(img);
+            } else {
+              var targetDiv = document.getElementById("plate_img");
+              targetDiv.innerHTML = "";
+            }
+          }'
+                          )
+                        )
+                      ),
+                      htmlOutput(outputId ="textbox_morpholgy", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
+                      
+                    ),
+                    column(
+                      9, 
+                      div(id = "plate_img"),
+                      plotlyOutput("plate_img", height = "715px", width = "165px"), 
+                      style = "background-color:transparent; padding-left:100px; padding-right:400px; padding-top:0px; padding-bottom:200px; margin-top:25px" #note margin-top changes how close the .png is to the top of the row
+                    )
+                  ),
+                  br(),
+                  htmlOutput(outputId = "morphology", width = "340px", style = "background-color:#E6E6E6; padding:18px")
+                ),
+                
+                tabPanel("TEMPERATURE", 
+                         fluidRow(
+                           column(1, 
+                                  style = "height:700px; width:33px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px"), # little buffer col
+                           column(2, 
+                                  style = "height:700px; width:250px; background-color:rgba(119,120,55,0.5); padding-left: 0px; padding-right: 20px",
+                                  br(),
+                                  selectInput(inputId = "datafiles",
+                                              label = "SELECT TEMPERATURE",
+                                              choices = c("10°C" = "10", "20°C" = "20", "24°C" = "24", "27°C" = "27", "30°C" = "30", "34°C" = "34", "37°C" = "37")),
+                                  htmlOutput(outputId ="textbox_temperature", style = "background-color: rgba(0, 0, 0, 0.5); color: white; padding:5px; margin-top:200px; margin-bottom:0px; margin-left:0px; margin-right:0px;")
+                           ),
+                           column(6, 
+                                  plotlyOutput("temp_plot", height = "600px", width = "900px"),
+                                  htmlOutput(outputId = "growth", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px; margin-left:-100px"),),
+                           column(3,
+                                  plotlyOutput("growth_rate_plot", height = "600px", width = "900px"),
+                                  htmlOutput(outputId = "growth_rate", style = "background-color:transparent; padding-right:5px; padding-left:10px; margin-top:10px")),
+                           
+                         )),
+                
+                
+                tabPanel(
+                  "METADATA",
+                  htmlOutput(outputId ="metadata", style = "background-color:transparent; padding:20px; margin-top:-40px"),
+                  #titlePanel("Interactive Spreadsheet"),
+                  sidebarLayout(
+                    sidebarPanel(
+                      # Checkbox group for column selection
+                      style = "width: 300px;", # Adjust the width here (e.g., width: 150px;)
+                      checkboxGroupInput(
+                        "columns",
+                        "SELECT COLUMNS TO DISPLAY",
+                        choices = colnames(DB_slim),
+                        selected = colnames(DB_slim)
+                      )
+                    ),
+                    mainPanel(
+                      style = "margin-left:-150px",
+                      # Data table output
+                      DTOutput("data_table")
+                    )
+                  )
+                ),
+                
     )
   )
-  
-  , id = "navBar", collapsible = TRUE # we can change to see when we shrink the windows: TRUE will pop up the hamburger menu icon 
 )
+
 
 
 
@@ -811,70 +717,6 @@ server<- function(input, output, session){
     });
   ')
   
-  
-  #render shinyjs tool for methods popup (morphology)
-  shinyjs::runjs('
-  $(document).ready(function() {
-    $("#textbox_morphology_link").click(function() {
-      var tooltipContent = "<div style=\'width: 340px; word-wrap: break-word;\'>"
-                          + "Cultures were grown on four media types<br>" 
-                          + "including Modified Melin-Norkrans (MMN),<br>"
-                          + " Modified Fries Media (Fries), Modified <br>"
-                          + "Hagem’s Agar (Hagem’s), and Pachlewski’s<br>"
-                          + "Media (Pachlewski’s, or Px). All media types<br>"
-                          + "were prepared at their full respective carbon concentrations and adjusted to pH 6 prior to<br> autoclaving."
-                          + " Cultures were grown for 28 days,<br> at room temperature, in the dark, prior to<br>"
-                          + "being photographed.</div>";
-
-      var tooltipHtml = \'<div id="custom_tooltip_content">\' + tooltipContent + \'</div>\';
-      $("#textbox_morpholgy_content").html(tooltipHtml).show();
-    });
-
-    // Hide tooltip when clicking outside of it
-    $(document).on("click", function(event) {
-      if (!$(event.target).closest("#textbox_morphology_link, #custom_tooltip_content").length) {
-        $("#textbox_morpholgy_content").hide();
-      }
-    });
-  });
-')
-  
-  
-  
-  #render shinyjs tool for methods popup (temperature)
-  shinyjs::runjs('
-  $(document).ready(function() {
-    $("#textbox_temperature_link").click(function() {
-      var tooltipContent = "<div style=\'width: 340px; word-wrap: break-word;\'>"
-                          + "Cultures were started by placing 3mm agar<br>"
-                          + "plugs on Modified Melin-Norkrans (MMN)<br>"
-                          + "media adjusted to pH 6 prior to autoclaving,<br>"
-                          + "and grown in temperature adjustable<br>" 
-                          + "incubators, in the dark, for a total of 33 days<br>"
-                          + "(at n=4 replicates per species per temperature treatment)." 
-                          + " Starting on day 8, colony area was recorded twice per week over the course<br>"
-                          + "of the assay by marking the colony margin on<br>"
-                          + "the back of each petri dish with a fine-tip<br>"
-                          + "sharpie. After 33 days of growth, the back of<br>"
-                          + "the petri dishes were imaged using a flatbed<br>" 
-                          + "scanner, and colony area was calculated for<br>" 
-                          + "each time point using the program imageJ.</div>";
-
-      var tooltipHtml = \'<div id="custom_tooltip_content">\' + tooltipContent + \'</div>\';
-      $("#textbox_temperature_content").html(tooltipHtml).show();
-    });
-
-    // Hide tooltip when clicking outside of it
-    $(document).on("click", function(event) {
-      if (!$(event.target).closest("#textbox_temperature_link, #custom_tooltip_content").length) {
-        $("#textbox_temperature_content").hide();
-      }
-    });
-  });
-')
-  
-  
-  
   output$home_bottom2 <- renderText(paste("This is version v1.0 of the database, released in beta on 28.July.2023",
                                           tags$br(),
                                           "SuilluScope was built using the open source programming language", 
@@ -883,10 +725,30 @@ server<- function(input, output, session){
                                           tags$a(href="https://shiny.rstudio.com/", "R shiny", target ="_blank"),
                                           tags$br(),
                                           "All of the code necessary to run the program is publicly available at", tags$a(href="https://github.com/MycoPunk/SUILLUSAPP", "the SuilluScope GitHub.", target= "_blank"), 
-                                          "Please report issues to the git issues page.",
+                                          "Please report issues to the git issues page",
                                           tags$br(),
                                           "If you have feature requests or a published dataset that you would like us to consider adding to this site, please contact the author", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
                                           
+  ))
+  
+  
+  output$textbox_morpholgy <- renderText(paste(tags$b("METHODS:"), 
+                                               tags$br(), 
+                                               "Cultures were grown on four media types including Modified Melin-Norkrans (MMN), 
+                                               Modified Fries Media (Fries), Modified Hagem’s Agar (Hagem’s), and Pachlewski’s Media (Pachlewski’s, or Px). 
+                                               All media types were prepared at their full respective carbon concentrations and adjusted to pH 6 prior to autoclaving. 
+                                               Cultures were grown for 28 days, at room temperature, in the dark, prior to being photographed."
+  ))
+  
+  output$textbox_temperature <- renderText(paste(tags$b("METHODS:"), 
+                                                 tags$br(), 
+                                                 "Cultures were started by placing 3mm agar plugs on Modified Melin-Norkrans (MMN) media, 
+                                                 adjusted to pH 6 prior to autoclaving, and grown in temperature adjustable incubators, 
+                                                 in the dark, for a total of 33 days (at n=4 replicates per species per temperature treatment). 
+                                                 Starting on day 8, colony area was recorded twice per week over the course of the assay by 
+                                                 marking the colony margin on the back of each petri dish with a fine-tip sharpie. 
+                                                 After 33 days of growth, the back of the petri dishes were imaged using a flatbed scanner, 
+                                                 and colony area was calculated for each time point using the program imageJ. "
   ))
   
   
@@ -976,17 +838,6 @@ server<- function(input, output, session){
     selected <- setdiff(selected_columns, "Culture.code")
     
     datatable(DB_slim[, selected, drop = FALSE], options = list(pageLength = 10))
-  })
-  
-  ###
-  ##CLOSE NAVBAR HAMBURGER AFTER CLICK
-  ###
-  observeEvent(input$navBar, {
-    runjs('
-      var elem = document.getElementsByClassName("navbar-collapse")[0]
-      elem.setAttribute("aria-expanded", "false");
-      elem.setAttribute("class", "navbar-collapse collapse");
-    ')
   })
   
   
