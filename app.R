@@ -756,6 +756,16 @@ ui = navbarPage(
   , id = "navBar", collapsible = TRUE # we can change to see when we shrink the windows: TRUE will pop up the hamburger menu icon 
 )
 
+# Set the title of the browser tab using JavaScript
+js_code <- '
+  document.title = "SuilluScope";
+'
+
+ui <- tagList(
+  tags$head(tags$script(HTML(js_code))),
+  ui
+)
+
 
 
 ##########################################
