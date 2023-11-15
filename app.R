@@ -769,7 +769,7 @@ server<- function(input, output, session){
                                        "SuilluScope is an interactive, open access database for <i>Suillus</i> fungi, a model genus for ectomycorrhizal ecology and evolution.",
                                        "There are extensive genomic resources available for", tags$i("Suillus"), "including more annotated genome assemblies 
                                        than for any other ectomycorrhizal group.",
-                                       "This platform proves data on the phenotypic traits and responses of these genome-sequenced isolates, aiming to help researchers identify optimal 
+                                       "This platform provides data on the phenotypic traits and responses of these genome-sequenced isolates, aiming to help researchers identify optimal 
                                        culture conditions, predict and compare trait responses across species, and empower further 
                                        research linking genotypes to phenotypes.",
                                        tags$br()
@@ -874,22 +874,40 @@ server<- function(input, output, session){
 ')
   
   
+ 
+##Add version in formation and SuilluScope logo to homepage
+  output$home_bottom2 <- renderUI({
+    text <- "This is version v1.0Beta of the database, released in beta on 28.July.2023"
+    text <- paste(text, tags$br(),
+                  "SuilluScope was built using the open source programming language",
+                  tags$a(href = "https://www.r-project.org/about.html", "R", target = "_blank"),
+                  "with reactive programming via",
+                  tags$a(href = "https://shiny.rstudio.com/", "R shiny", target = "_blank"),
+                  tags$br(),
+                  "All of the code necessary to run the program is publicly available at",
+                  tags$a(href = "https://github.com/MycoPunk/SuilluScope", "the SuilluScope GitHub.", target = "_blank"),
+                  "Please report issues to the git issues page.",
+                  tags$br(),
+                  "If you have feature requests or a published dataset that you would like us to consider adding to this site, please contact the author", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
+    )
+    
+    #Add SuilluScope Logo
+    image_path <- "ISC_logo_2023.png"
+    image_tag <- tags$a(href = "http://www2.hawaii.edu/~nn33/suillus/",
+                        tags$img(src = image_path, style = "max-width: 100px; height: auto;"))
+
+    
+    #Combine text and logo within div elements
+    image_div <- tags$div(style = "text-align: center; margin-top: -110px; margin-bottom: 75px;", image_tag)
+    text_div <- tags$div(style = "text-align: left; margin-top: -50px;", HTML(text))
+    
+    # Return the UI content
+    return(tagList(image_div, text_div))
+  })
   
-  output$home_bottom2 <- renderText(paste("This is version v1.0 of the database, released in beta on 28.July.2023",
-                                          tags$br(),
-                                          "SuilluScope was built using the open source programming language", 
-                                          tags$a(href="https://www.r-project.org/about.html", "R", target="_blank"), 
-                                          "with reactive programming via", 
-                                          tags$a(href="https://shiny.rstudio.com/", "R shiny", target ="_blank"),
-                                          tags$br(),
-                                          "All of the code necessary to run the program is publicly available at", tags$a(href="https://github.com/MycoPunk/SUILLUSAPP", "the SuilluScope GitHub.", target= "_blank"), 
-                                          "Please report issues to the git issues page.",
-                                          tags$br(),
-                                          "If you have feature requests or a published dataset that you would like us to consider adding to this site, please contact the author", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
-                                          
-  ))
   
   
+
   
   
   
