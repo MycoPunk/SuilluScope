@@ -774,7 +774,7 @@ ui <- tagList(
 server<- function(input, output, session){ 
   #define 'HOME' page
   output$home_left <- renderText(paste(tags$b("WELCOME TO", style = "font-size: 24px;"),
-                                       tags$b("SuilluScope v1.0", style = "font-size: 24px; color: #D3AD0D"),
+                                       tags$b("SuilluScope", style = "font-size: 24px; color: #D3AD0D"),
                                        tags$br(),
                                        "SuilluScope is an interactive, open access database for <i>Suillus</i> fungi, a model genus for ectomycorrhizal ecology and evolution.",
                                        "There are extensive genomic resources available for", tags$i("Suillus"), "including more annotated genome assemblies 
@@ -788,15 +788,16 @@ server<- function(input, output, session){
   
   output$home_right<- renderText(paste(tags$b("ISOLATE COLLECTION", style = "font-size: 24px; color: #D3AD0D"),
                                        tags$br(),
-                                       "All isolates used in the database are from the", tags$i("Suillus"), "genome culture collection, curated at Duke University.", 
-                                       "For more information on the <i>Suillus</i> system, please visit",
-                                       tags$a(href = "http://www2.hawaii.edu/~nn33/suillus/", "The International ", tags$i("Suillus"), " Consortium.", target = "_blank"),
+                                       "All isolates used in the database are part of the", tags$i("Suillus"), "Genome Strain Culture Collection.", 
+                                       "Isolates amenable to cryopreservation have been integrated into the", 
+                                       tags$a(href="https://nrrl.ncaur.usda.gov/", "Agricultural Research Service Culture Collection (NRRL).", target="_blank"), 
+                                       "Please see the Metadata tab for NRRL accession numbers.",
+                                       "Isolates which cannot be cryopreserved are available by contacting the author", mailtoR(email = "LotusLofgren@gmail.com", text = "here."),
                                        "Genomic resources for these cultures are available on the MycoCosm ",tags$i("Suillus"), 
                                        tags$a(href="https://mycocosm.jgi.doe.gov/Suillus/Suillus.info.html", "web portal", target="_blank"), 
-                                       "opperated by DOE Joint Genome Institute.",
-                                       "Isolates amenable to cryopreservation will soon be avalible as part of the", 
-                                       tags$a(href="https://nrrl.ncaur.usda.gov/", "Agricultural Research Culture Collection (NRRL).", target="_blank"), 
-                                       "Isolates which cannot be cryopreserved are available from the authors", mailtoR(email = "LotusLofgren@gmail.com", text = "here.")
+                                       "operated by DOE Joint Genome Institute.",
+                                       "For more information on the <i>Suillus</i> system, please visit",
+                                       tags$a(href = "http://www2.hawaii.edu/~nn33/suillus/", "The International ", tags$i("Suillus"), " Consortium.", target = "_blank")
   ))
   
   #render shinyjs tool for citation pop up 
@@ -887,7 +888,7 @@ server<- function(input, output, session){
  
 ##Add version in formation and SuilluScope logo to homepage
   output$home_bottom2 <- renderUI({
-    text <- "This is version v1.0Beta of the database, released in beta on 28.July.2023"
+    text <- "This is version v1.0Beta of the database, released on 28.July.2023"
     text <- paste(text, tags$br(),
                   "SuilluScope was built using the open source programming language",
                   tags$a(href = "https://www.r-project.org/about.html", "R", target = "_blank"),
