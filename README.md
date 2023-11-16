@@ -7,7 +7,7 @@ All isolates used in the database are from the <i>Suillus</i> Genome Strain Cult
 Isolates amenable to cryopreservation have been integrated into the Agricultural Research Service Culture Collection (NRRL) (https://nrrl.ncaur.usda.gov/).
 Accession numbers for these strains are listed in the SuilluScope metadata tab. Isolates which cannot be cryopreserved are available by contacting the author via the SuilluScope interface.
 <br><br>
-Genomic resources for these cultures are available on MycoCosm's <i>Suillus</i> web portal (https://mycocosm.jgi.doe.gov/Suillus/Suillus.info.html) opperated by DOE Joint Genome Institut$
+Genomic resources for these cultures are available on MycoCosm's <i>Suillus</i> web portal (https://mycocosm.jgi.doe.gov/Suillus/Suillus.info.html) opperated by DOE Joint Genome Institute
 For more information on the <i>Suillus</i> system, please visit The International <i>Suillus</i> Consortium webpage at https://www2.hawaii.edu/~nn33/suillus/.
 <br><br>
 SuilluScope was built using the open source programming language R (https://www.r-project.org/about.html), with reactive programming via R shiny
